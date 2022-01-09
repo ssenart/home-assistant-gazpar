@@ -1,0 +1,14 @@
+{
+  "domain": "gazpar",
+  "name": "GrDF Gazpar",
+  "version": "1.2.1",
+  "issue_tracker": "https://github.com/ssenart/ha-custom_components/issues",
+  "requirements": [
+    "pygazpar==1.2.2"
+  ],
+  "dependencies": [],
+  "codeowners": [
+    "ssenart"
+  ],
+  "iot_class": "cloud_polling"
+}
