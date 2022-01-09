@@ -1,6 +1,7 @@
 {
   "domain": "gazpar",
   "name": "GrDF Gazpar",
+  "documentation": "https://github.com/ssenart/home-assistant-gazpar",
   "version": "1.2.1",
   "issue_tracker": "https://github.com/ssenart/ha-custom_components/issues",
   "requirements": [
@@ -8,7 +9,7 @@
   ],
   "dependencies": [],
   "codeowners": [
-    "ssenart"
+    "@ssenart"
   ],
   "iot_class": "cloud_polling"
 }
