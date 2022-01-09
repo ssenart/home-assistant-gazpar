@@ -20,7 +20,7 @@ Copy the gazpar directory in HA config/custom_components/gazpar directory.
 
 ## Configuration
 
-Update your HA configuration with :
+Add to your Home Assistant configuration.yaml:
 
 ```yaml
 sensor:
