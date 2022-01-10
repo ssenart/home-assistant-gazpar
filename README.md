@@ -1,6 +1,6 @@
 # Home Assistant GrDF Gazpar
 
-GrDF Gazpar integration permit to integration in Home Assistant all your gas consumption data.
+GrDF Gazpar integration permits to integrate in Home Assistant all your gas consumption data.
 
 With that integration in place, you can display statistics by period:
 
@@ -12,7 +12,7 @@ GrDF Gazpar custom component is using [PyGazpar](https://github.com/ssenart/PyGa
 
 ### Method 1 : HACS (recommended)
 
-Follow the steps described [here](https://hacs.xyz/docs/faq/custom_repositories) to add GrDF Gazpar integration using HACS(https://hacs.xyz/).
+Follow the steps described [here](https://hacs.xyz/docs/faq/custom_repositories) to add GrDF Gazpar integration with [HACS](https://hacs.xyz/).
 
 ### Method 2 : Manual
 
