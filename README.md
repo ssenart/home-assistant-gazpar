@@ -38,7 +38,7 @@ Restart your HA application. In HA development panel, you should see the new Gaz
 - sensor.gazpar_daily_energy:
 ```yaml
 attribution: Data provided by GrDF
-username: stephane.senart@gmail.com
+username: xxxxxxxxx
 time_period: 19/04/2021
 start_index_m3: 13708
 end_index_m3: 13713
@@ -56,7 +56,7 @@ icon: mdi:fire
 - sensor.gazpar_weekly_energy:
 ```yaml
 attribution: Data provided by GrDF
-username: stephane.senart@gmail.com
+username: xxxxxxxxx
 current: 
   time_period: Du 19/04/2021 au 19/04/2021
   volume_m3: 4.7
@@ -77,7 +77,7 @@ icon: mdi:fire
 - sensor.gazpar_monthly_energy:
 ```yaml
 attribution: Data provided by GrDF
-username: stephane.senart@gmail.com
+username: xxxxxxxxx
 current: 
   time_period: Avril 2021
   volume_m3: 135.4
