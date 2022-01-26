@@ -222,7 +222,7 @@ class GazparSensor(Entity):
 
     # ----------------------------------
     @property
-    def device_state_attributes(self):
+    def extra_state_attributes(self):
         """Return the state attributes of the sensor."""
 
         return Util.toAttributes(self._username, self._meterReadingFrequency, self._data)
