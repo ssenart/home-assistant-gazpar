@@ -12,7 +12,17 @@ GrDF Gazpar custom component is using [PyGazpar](https://github.com/ssenart/PyGa
 
 ### Method 1 : HACS (recommended)
 
-Follow the steps described [here](https://hacs.xyz/docs/faq/custom_repositories) to add GrDF Gazpar integration with [HACS](https://hacs.xyz/).
+Follow the steps described below to add GrDF Gazpar integration with [HACS](https://hacs.xyz/):
+
+1. From [HACS](https://hacs.xyz/) (Home Assistant Community Store), open the upper left menu and select `Custom repositories` option to add the new repo.
+
+2. Add the address <https://github.com/ssenart/home-assistant-gazpar> with the category `Integration`, and click `ADD`. The new corresponding repo appears in the repo list.
+
+3. Select this repo (this integration description is displayed in a window) and click on `INSTALL THIS REPOSITORY` button on the lower right of this window.
+
+4. Keep the last version and click the button `INSTALL` on the lower right.
+
+5. Do click on `RELOAD` button for completion! The integration is now ready. It remains the configuration.
 
 ### Method 2 : Manual
 
