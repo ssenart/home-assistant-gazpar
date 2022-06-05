@@ -35,11 +35,11 @@ Add to your Home Assistant configuration.yaml:
 ```yaml
 sensor:
 - platform: gazpar
-    username: ***
-    password: ***
-    pce_identifier: xxxxxxxxx
-    tmpdir: /tmp
-    scan_interval: 01:00:00
+  username: ***
+  password: ***
+  pce_identifier: xxxxxxxxx
+  tmpdir: /tmp
+  scan_interval: 01:00:00
 ```
 
 Ensure that tmpdir already exists before starting HA. It is used to store the downloaded files from GrDF.
