@@ -29,17 +29,13 @@ DEFAULT_SCAN_INTERVAL = timedelta(hours=4)
 DEFAULT_WAITTIME = 30
 DEFAULT_TESTMODE = False
 
-ICON_GAS = "mdi:fire"
-
-HA_LAST_ENERGY_KWH_BY_FREQUENCY = {
-    Frequency.HOURLY: "Gazpar hourly energy",
-    Frequency.DAILY: "Gazpar daily energy",
-    Frequency.WEEKLY: "Gazpar weekly energy",
-    Frequency.MONTHLY: "Gazpar monthly energy"
-}
+SENSOR_NAME = "Gazpar"
 
 LAST_INDEX = -1
-BEFORE_LAST_INDEX = -2
+
+DAILY_LAST_WEEK_INDEX = -14
+WEEKLY_LAST_MONTH_INDEX = -8
+MONTHLY_LAST_YEAR_INDEX = -24
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_USERNAME): cv.string,
@@ -105,17 +101,8 @@ class GazparAccount:
         self._dataByFrequency = {}
         self.sensors = []
 
-        lastIndexByFrequence = {
-            Frequency.HOURLY: LAST_INDEX,
-            Frequency.DAILY: LAST_INDEX,
-            Frequency.WEEKLY: BEFORE_LAST_INDEX,
-            Frequency.MONTHLY: BEFORE_LAST_INDEX,
-        }
-
-        for frequency in Frequency:
-            if frequency is not Frequency.HOURLY:  # Hourly not yet implemented.
-                self.sensors.append(
-                    GazparSensor(HA_LAST_ENERGY_KWH_BY_FREQUENCY[frequency], PropertyName.ENERGY.value, ENERGY_KILO_WATT_HOUR, lastIndexByFrequence[frequency], frequency, self))
+        self.sensors.append(
+            GazparSensor(SENSOR_NAME, PropertyName.ENERGY.value, ENERGY_KILO_WATT_HOUR, self))
 
         if hass is not None:
             call_later(hass, 5, self.update_gazpar_data)
@@ -136,7 +123,7 @@ class GazparAccount:
                                     password=self._password,
                                     pceIdentifier=self._pceIdentifier,
                                     meterReadingFrequency=frequency,
-                                    lastNDays=30,
+                                    lastNDays=720,
                                     tmpDirectory=self._tmpdir,
                                     testMode=self._testMode)
                     client.update()
@@ -185,16 +172,22 @@ class GazparSensor(Entity):
     """Representation of a sensor entity for Linky."""
 
     # ----------------------------------
-    def __init__(self, name, identifier, unit, index, meterReadingFrequency: Frequency, account: GazparAccount):
+    def __init__(self, name, identifier, unit, account: GazparAccount):
         """Initialize the sensor."""
         self._name = name
         self._identifier = identifier
         self._unit = unit
-        self._index = index
         self._account = account
         self._username = account.username
-        self._meterReadingFrequency = meterReadingFrequency
-        self._data = {}
+        self._dataByFrequency = {}
+        self._errorMessage = ""
+
+        self._lastIndexByFrequence = {
+            Frequency.HOURLY: LAST_INDEX,
+            Frequency.DAILY: DAILY_LAST_WEEK_INDEX,
+            Frequency.WEEKLY: WEEKLY_LAST_MONTH_INDEX,
+            Frequency.MONTHLY: MONTHLY_LAST_YEAR_INDEX,
+        }
 
     # ----------------------------------
     @property
@@ -207,7 +200,7 @@ class GazparSensor(Entity):
     def state(self):
         """Return the state of the sensor."""
 
-        return Util.toState(self._data)
+        return Util.toState(self._dataByFrequency)
 
     @property
     def unit_of_measurement(self):
@@ -225,20 +218,25 @@ class GazparSensor(Entity):
     def extra_state_attributes(self):
         """Return the state attributes of the sensor."""
 
-        return Util.toAttributes(self._username, self._meterReadingFrequency, self._data)
+        return Util.toAttributes(self._username, self._dataByFrequency, self._errorMessage)
 
     # ----------------------------------
     def update(self):
         """Retrieve the new data for the sensor."""
 
-        _LOGGER.debug(f"HA requests its {self._meterReadingFrequency} data to be updated...")
+        _LOGGER.debug(f"HA requests its data to be updated...")
         try:
-            data = self._account.dataByFrequency.get(self._meterReadingFrequency)
 
-            if data is not None and len(data) > 0:
-                self._data = data[self._index:]
-                _LOGGER.debug(f"HA {self._meterReadingFrequency} data have been updated successfully")
-            else:
-                _LOGGER.debug(f"No {self._meterReadingFrequency} data available yet for update")
+            for frequency in Frequency:
+                if frequency is not Frequency.HOURLY:  # Hourly not yet implemented.
+
+                    data = self._account.dataByFrequency.get(frequency)
+
+                    if data is not None and len(data) > 0:
+                        self._dataByFrequency[frequency] = data[self._lastIndexByFrequence[frequency]:]
+                        _LOGGER.debug(f"HA {frequency} data have been updated successfully")
+                    else:
+                        _LOGGER.debug(f"No {frequency} data available yet for update")
         except BaseException:
-            _LOGGER.error(f"Failed to update {self._meterReadingFrequency} HA data with exception : %s", traceback.format_exc())
+            self._errorMessage = f"Failed to update {self._meterReadingFrequency} HA data with exception : {traceback.format_exc()}"
+            _LOGGER.error(self._errorMessage)

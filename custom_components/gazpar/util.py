@@ -1,53 +1,68 @@
 from pygazpar.enum import PropertyName
 from pygazpar.enum import Frequency
-from homeassistant.const import CONF_USERNAME, ATTR_ATTRIBUTION, ATTR_UNIT_OF_MEASUREMENT, ATTR_FRIENDLY_NAME, ATTR_ICON, ENERGY_KILO_WATT_HOUR
+from homeassistant.const import CONF_USERNAME, ATTR_ATTRIBUTION, ATTR_UNIT_OF_MEASUREMENT, ATTR_FRIENDLY_NAME, ATTR_ICON, ATTR_DEVICE_CLASS, ENERGY_KILO_WATT_HOUR, DEVICE_CLASS_ENERGY
+from homeassistant.components.sensor import ATTR_STATE_CLASS, STATE_CLASS_TOTAL_INCREASING
 
+
+HA_ATTRIBUTION = "Data provided by GrDF"
+
+ICON_GAS = "mdi:fire"
+
+SENSOR_FRIENDLY_NAME = "Gazpar"
+
+LAST_INDEX = -1
+
+ATTR_ERROR_MESSAGE = "errorMessage"
 
 # --------------------------------------------------------------------------------------------
 class Util:
 
-    __HA_ATTRIBUTION = "Data provided by GrDF"
 
-    __LAST_INDEX = -1
-    __BEFORE_LAST_INDEX = -2
-
+    
     # ----------------------------------
     @staticmethod
     def toState(pygazparData: list) -> str:
 
         if len(pygazparData) > 0:
-            return pygazparData[Util.__LAST_INDEX].get(PropertyName.ENERGY.value)
+            volumeIndex = int(pygazparData[Frequency.DAILY][Util.__LAST_INDEX].get(PropertyName.END_INDEX.value))
+            converterFactor = float(pygazparData[Frequency.DAILY][Util.__LAST_INDEX].get(PropertyName. CONVERTER_FACTOR.value))
+            return volumeIndex * converterFactor
         else:
             return None
 
     # ----------------------------------
     @staticmethod
-    def toAttributes(username: str, frequency: Frequency, pygazparData: list) -> dict:
+    def toAttributes(username: str, pygazparData: list, errorMessage: str) -> dict:
 
         friendlyNameByFrequency = {
-            Frequency.HOURLY: "Gazpar hourly energy",
-            Frequency.DAILY: "Gazpar daily energy",
-            Frequency.WEEKLY: "Gazpar weekly energy",
-            Frequency.MONTHLY: "Gazpar monthly energy"
+            Frequency.HOURLY: "hourly",
+            Frequency.DAILY: "daily",
+            Frequency.WEEKLY: "weekly",
+            Frequency.MONTHLY: "monthly"
         }
 
         res = {
-            ATTR_ATTRIBUTION: Util.__HA_ATTRIBUTION,
+            ATTR_ATTRIBUTION: HA_ATTRIBUTION,
             CONF_USERNAME: username,
             ATTR_UNIT_OF_MEASUREMENT: ENERGY_KILO_WATT_HOUR,
-            ATTR_FRIENDLY_NAME: friendlyNameByFrequency[frequency],
-            ATTR_ICON: "mdi:fire"
+            ATTR_FRIENDLY_NAME: SENSOR_FRIENDLY_NAME,
+            ATTR_ICON: ICON_GAS,
+            ATTR_DEVICE_CLASS: DEVICE_CLASS_ENERGY,
+            ATTR_STATE_CLASS: STATE_CLASS_TOTAL_INCREASING,
+            ATTR_ERROR_MESSAGE: errorMessage
         }
 
-        if frequency == Frequency.WEEKLY or frequency == Frequency.MONTHLY:  # Cases WEEKLY and MONTHLY.
-            if len(pygazparData) > 1:
-                res["previous"] = pygazparData[Util.__BEFORE_LAST_INDEX]
-            if len(pygazparData) > 0:
-                res["current"] = pygazparData[Util.__LAST_INDEX]
-        elif frequency == Frequency.DAILY and len(pygazparData) > 0:  # Cases DAILY.
-            for propertyName in PropertyName:
-                value = pygazparData[Util.__LAST_INDEX].get(propertyName.value)
-                if value is not None:
-                    res[propertyName.value] = value
+        for frequency in Frequency:
+            if frequency is not Frequency.HOURLY:  # Hourly not yet implemented.
+
+                if len(pygazparData) > 0:
+                    data = pygazparData[frequency]
+
+                    if len(data) > 0:
+                        reversedData = data[::-1]
+                    else:
+                        reversedData = []
+
+                    res[friendlyNameByFrequency[frequency]] = reversedData
 
         return res
