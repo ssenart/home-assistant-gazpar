@@ -8,6 +8,8 @@ With that integration in place, you can display statistics by period:
 
 GrDF Gazpar custom component is using [PyGazpar](https://github.com/ssenart/PyGazpar) library to retrieve GrDF data.
 
+It is compatible with [Lovelace Garpar Card](https://github.com/ssenart/lovelace-gazpar-card).
+
 ## Installation
 
 ### Method 1 : HACS (recommended)
