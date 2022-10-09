@@ -2,7 +2,7 @@
   "domain": "gazpar",
   "name": "GrDF Gazpar",
   "documentation": "https://github.com/ssenart/home-assistant-gazpar",
-  "version": "1.1.5",
+  "version": "1.2.0",
   "issue_tracker": "https://github.com/ssenart/ha-custom_components/issues",
   "requirements": [
     "pygazpar==1.1.5"

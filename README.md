@@ -44,65 +44,58 @@ sensor:
 
 Ensure that tmpdir already exists before starting HA. It is used to store the downloaded files from GrDF.
 
-Restart your HA application. In HA development panel, you should see the new Gazpar entities with their corresponding attributes:
-- sensor.gazpar_daily_energy:
+Restart your HA application. In HA development panel, you should see the new Gazpar entity 'sensor.gazpar' with its corresponding attributes:
+
+- sensor.gazpar:
 ```yaml
 attribution: Data provided by GrDF
-username: xxxxxxxxx
-time_period: 19/04/2021
-start_index_m3: 13708
-end_index_m3: 13713
-volume_m3: 4.7
-energy_kwh: 52
-converter_factor_kwh/m3: 11.268
-temperature_degC: 12
-type: MES
-timestamp: 2021-04-21T07:50:09.505625
+username: stephane.senart@gmail.com
 unit_of_measurement: kWh
-friendly_name: Gazpar daily energy
+friendly_name: Gazpar
 icon: mdi:fire
-```
+device_class: energy
+state_class: total_increasing
+errorMessage: 
+daily: 
+- time_period: 07/10/2022
+  start_index_m3: 15714
+  end_index_m3: 15716
+  volume_m3: 2
+  energy_kwh: 21
+  converter_factor_kwh/m3: 11.27
+  type: Mesuré
+  timestamp: '2022-10-09T20:59:12.356210'
+- time_period: 06/10/2022
+  start_index_m3: 15713
+  end_index_m3: 15714
+  volume_m3: 2
+  energy_kwh: 17
+  converter_factor_kwh/m3: 11.27
+  type: Mesuré
+  timestamp: '2022-10-09T20:59:12.356210'
+...
 
-- sensor.gazpar_weekly_energy:
-```yaml
-attribution: Data provided by GrDF
-username: xxxxxxxxx
-current: 
-  time_period: Du 19/04/2021 au 19/04/2021
-  volume_m3: 4.7
-  energy_kwh: 52
-  timestamp: '2021-04-21T07:54:06.324645'
+weekly: 
+- time_period: Du 03/10/2022 au 09/10/2022
+  volume_m3: 9
+  energy_kwh: 87
+  timestamp: '2022-10-09T20:59:13.391911'
+- time_period: Du 26/09/2022 au 02/10/2022
+  volume_m3: 11
+  energy_kwh: 132
+  timestamp: '2022-10-09T20:59:13.391911'
+...
 
-previous: 
-  time_period: Du 12/04/2021 au 18/04/2021
-  volume_m3: 57.1
-  energy_kwh: 643
-  timestamp: '2021-04-21T07:54:06.324645'
-
-unit_of_measurement: kWh
-friendly_name: Gazpar weekly energy
-icon: mdi:fire
-```
-
-- sensor.gazpar_monthly_energy:
-```yaml
-attribution: Data provided by GrDF
-username: xxxxxxxxx
-current: 
-  time_period: Avril 2021
-  volume_m3: 135.4
-  energy_kwh: 1525
-  timestamp: '2021-04-21T07:58:01.392893'
-
-previous: 
-  time_period: Mars 2021
-  volume_m3: 261.1
-  energy_kwh: 2937
-  timestamp: '2021-04-21T07:58:01.392893'
-
-unit_of_measurement: kWh
-friendly_name: Gazpar monthly energy
-icon: mdi:fire
+monthly: 
+- time_period: 'Octobre 2022 '
+  volume_m3: 12
+  energy_kwh: 119
+  timestamp: '2022-10-09T20:59:14.447149'
+- time_period: 'Septembre 2022 '
+  volume_m3: 34
+  energy_kwh: 409
+  timestamp: '2022-10-09T20:59:14.447149'
+...
 ```
 
 ## Home Assistant Energy module integration
@@ -121,27 +114,14 @@ template:
     - name: gas_volume
       unit_of_measurement: 'm³'
       state: >
-        {% set sourceState = state_attr('sensor.gazpar_daily_energy', 'end_index_m3') %}
-        {% set targetState = states('sensor.gas_volume') %}
-        {% if is_number(sourceState) and sourceState | float(0.0) > targetState | float(0.0) %}
-          {{ sourceState }}
-        {% else %}
-          {{ targetState }}
-        {% endif %}  
+        {{ state_attr('sensor.gazpar', 'daily')[0]['end_index_m3'] | float(0) }}
       icon: mdi:fire
       device_class: gas
       state_class: total_increasing
     - name: gas_energy
       unit_of_measurement: 'kWh'      
       state: >   
-        {% set sourceState = states('sensor.gas_volume') %}
-        {% set converter_factor = state_attr('sensor.gazpar_daily_energy', 'converter_factor_kwh/m3') | float(11.2) %}
-        {% set targetState = states('sensor.gas_energy') %}
-        {% if is_number(sourceState) and sourceState | float(0.0) * converter_factor > targetState | float(0.0) %}
-          {{ sourceState | float(0.0) * converter_factor }}
-        {% else %}
-          {{ targetState }}
-        {% endif %}  
+        {{ states('sensor.gazpar') | float(0) }}
       icon: mdi:fire
       device_class: energy
       state_class: total_increasing
