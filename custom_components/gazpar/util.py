@@ -58,7 +58,7 @@ class Util:
                 if len(pygazparData) > 0:
                     data = pygazparData.get(frequency)
 
-                    if len(data) > 0:
+                    if data is not None and len(data) > 0:
                         reversedData = data[::-1]
                     else:
                         reversedData = []
