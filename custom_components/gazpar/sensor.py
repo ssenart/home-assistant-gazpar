@@ -37,6 +37,8 @@ DAILY_LAST_WEEK_INDEX = -14
 WEEKLY_LAST_MONTH_INDEX = -8
 MONTHLY_LAST_YEAR_INDEX = -24
 
+ICON_GAS = "mdi:fire"
+
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_USERNAME): cv.string,
     vol.Required(CONF_PASSWORD): cv.string,

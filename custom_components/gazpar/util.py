@@ -24,8 +24,8 @@ class Util:
     def toState(pygazparData: list) -> str:
 
         if len(pygazparData) > 0:
-            volumeIndex = int(pygazparData[Frequency.DAILY][Util.__LAST_INDEX].get(PropertyName.END_INDEX.value))
-            converterFactor = float(pygazparData[Frequency.DAILY][Util.__LAST_INDEX].get(PropertyName. CONVERTER_FACTOR.value))
+            volumeIndex = int(pygazparData[Frequency.DAILY][LAST_INDEX].get(PropertyName.END_INDEX.value))
+            converterFactor = float(pygazparData[Frequency.DAILY][LAST_INDEX].get(PropertyName. CONVERTER_FACTOR.value))
             return volumeIndex * converterFactor
         else:
             return None
@@ -56,7 +56,7 @@ class Util:
             if frequency is not Frequency.HOURLY:  # Hourly not yet implemented.
 
                 if len(pygazparData) > 0:
-                    data = pygazparData[frequency]
+                    data = pygazparData.get(frequency)
 
                     if len(data) > 0:
                         reversedData = data[::-1]
