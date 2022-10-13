@@ -2,13 +2,11 @@
 
 GrDF Gazpar integration permits to integrate in Home Assistant all your gas consumption data.
 
-With that integration in place, you can display statistics by period:
+From version 1.2.0, it is compatible with [Lovelace Garpar Card](https://github.com/ssenart/lovelace-gazpar-card).
 
-![Dashboard](images/gazpar_dashboard.png)
+![Lovelace Garpar Card](images/gazpar-card.png)
 
 GrDF Gazpar custom component is using [PyGazpar](https://github.com/ssenart/PyGazpar) library to retrieve GrDF data.
-
-It is compatible with [Lovelace Garpar Card](https://github.com/ssenart/lovelace-gazpar-card).
 
 ## Installation
 
