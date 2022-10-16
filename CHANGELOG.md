@@ -8,13 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 [#13](https://github.com/ssenart/home-assistant-gazpar/issues/13): [Feature] Add attribute errorMessages that displays all error messages raised while using PyGazpar library.
+
 [#12](https://github.com/ssenart/home-assistant-gazpar/issues/12): [Feature] Compute Yearly data from Monthly data.
 
 ## [1.2.0] - 2022-10-09
 
 ### Added
-[#8](https://github.com/ssenart/home-assistant-gazpar/issues/8): Add support for lovelace card. Now, the integration provide a single entity sensor.gazpar that
-contains both daily, weekly and monthly data.
+[#8](https://github.com/ssenart/home-assistant-gazpar/issues/8): Add support for lovelace card. Now, the integration provide a single entity sensor.gazpar that contains both daily, weekly and monthly data.
 
 ## [1.1.5] - 2022-07-11
 
