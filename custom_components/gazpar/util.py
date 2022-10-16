@@ -12,6 +12,7 @@ SENSOR_FRIENDLY_NAME = "Gazpar"
 
 LAST_INDEX = -1
 
+ATTR_PCE = "pce"
 ATTR_ERROR_MESSAGES = "errorMessages"
 
 
@@ -31,17 +32,19 @@ class Util:
 
     # ----------------------------------
     @staticmethod
-    def toAttributes(username: str, pygazparData: dict[FrequencyStr, list[Any]], errorMessages: list[str]) -> dict[str, Any]:
+    def toAttributes(username: str, pceIdentifier: str, pygazparData: dict[FrequencyStr, list[Any]], errorMessages: list[str]) -> dict[str, Any]:
 
         res = {
             ATTR_ATTRIBUTION: HA_ATTRIBUTION,
             CONF_USERNAME: username,
+            ATTR_PCE: pceIdentifier,
             ATTR_UNIT_OF_MEASUREMENT: ENERGY_KILO_WATT_HOUR,
             ATTR_FRIENDLY_NAME: SENSOR_FRIENDLY_NAME,
             ATTR_ICON: ICON_GAS,
             ATTR_DEVICE_CLASS: DEVICE_CLASS_ENERGY,
             ATTR_STATE_CLASS: STATE_CLASS_TOTAL_INCREASING,
             ATTR_ERROR_MESSAGES: errorMessages,
+            str(FrequencyStr.HOURLY): {},
             str(FrequencyStr.DAILY): {},
             str(FrequencyStr.WEEKLY): {},
             str(FrequencyStr.MONTHLY): {},

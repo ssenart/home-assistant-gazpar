@@ -230,7 +230,6 @@ class GazparSensor(Entity):
         self._identifier = identifier
         self._unit = unit
         self._account = account
-        self._username = account.username
         self._dataByFrequency = {}
 
         self._lastIndexByFrequence = {
@@ -270,7 +269,7 @@ class GazparSensor(Entity):
     def extra_state_attributes(self):
         """Return the state attributes of the sensor."""
 
-        return Util.toAttributes(self._username, self._dataByFrequency, self._account.errorMessages)
+        return Util.toAttributes(self._account.username, self._account.pceIdentifier, self._dataByFrequency, self._account.errorMessages)
 
     # ----------------------------------
     def update(self):

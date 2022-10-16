@@ -81,6 +81,6 @@ class TestGazparSensor:
         for entity in self._entities:
             entity.update()
 
-            attributes = Util.toAttributes(entity._username, entity._dataByFrequency, [])
+            attributes = Util.toAttributes("testUserName", "testPceIdentifier", entity._dataByFrequency, [])
 
             TestGazparSensor.logger.info(f"attributes={json.dumps(attributes, indent=2)}")

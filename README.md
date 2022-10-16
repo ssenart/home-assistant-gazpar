@@ -49,13 +49,15 @@ Restart your HA application. In HA development panel, you should see the new Gaz
 - sensor.gazpar:
 ```yaml
 attribution: Data provided by GrDF
-username: stephane.senart@gmail.com
+username: titi.toto@tata.Fr
+pce: 123456789
 unit_of_measurement: kWh
 friendly_name: Gazpar
 icon: mdi:fire
 device_class: energy
 state_class: total_increasing
-errorMessage: 
+errorMessages:
+hourly: 
 daily: 
 - time_period: 07/10/2022
   start_index_m3: 15714
@@ -95,6 +97,10 @@ monthly:
   volume_m3: 34
   energy_kwh: 409
   timestamp: '2022-10-09T20:59:14.447149'
+...
+
+yearly:
+
 ...
 ```
 
