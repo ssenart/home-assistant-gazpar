@@ -73,7 +73,7 @@ class TestGazparSensor:
             CONF_WAITTIME: 30,
             CONF_TMPDIR: "./tmp",
             CONF_SCAN_INTERVAL: 600,
-            CONF_TESTMODE: True
+            CONF_TESTMODE: False
         }
 
         setup_platform(None, config, self.add_entities)
@@ -81,6 +81,6 @@ class TestGazparSensor:
         for entity in self._entities:
             entity.update()
 
-            attributes = Util.toAttributes("testUserName", "testPceIdentifier", entity._dataByFrequency, [])
+            attributes = Util.toAttributes(config[CONF_USERNAME], config[CONF_PCE_IDENTIFIER], entity._dataByFrequency, [])
 
             TestGazparSensor.logger.info(f"attributes={json.dumps(attributes, indent=2)}")
