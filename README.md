@@ -99,7 +99,16 @@ monthly:
   timestamp: '2022-10-09T20:59:14.447149'
 ...
 
-yearly:
+yearly: 
+- time_period: '2022'
+  energy_kwh: 11958
+  volume_m3: 1078
+- time_period: '2021'
+  energy_kwh: 23148
+  volume_m3: 2099
+- time_period: '2020'
+  energy_kwh: 21160
+  volume_m3: 1904
 
 ...
 ```
