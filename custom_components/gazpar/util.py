@@ -1,8 +1,8 @@
 from pygazpar.enum import PropertyName
-from pygazpar.enum import Frequency
 from homeassistant.const import CONF_USERNAME, ATTR_ATTRIBUTION, ATTR_UNIT_OF_MEASUREMENT, ATTR_FRIENDLY_NAME, ATTR_ICON, ATTR_DEVICE_CLASS, ENERGY_KILO_WATT_HOUR, DEVICE_CLASS_ENERGY
 from homeassistant.components.sensor import ATTR_STATE_CLASS, STATE_CLASS_TOTAL_INCREASING
-
+from typing import Any, Union
+from .enum import FrequencyStr
 
 HA_ATTRIBUTION = "Data provided by GrDF"
 
@@ -12,34 +12,26 @@ SENSOR_FRIENDLY_NAME = "Gazpar"
 
 LAST_INDEX = -1
 
-ATTR_ERROR_MESSAGE = "errorMessage"
+ATTR_ERROR_MESSAGES = "errorMessages"
+
 
 # --------------------------------------------------------------------------------------------
 class Util:
 
-
-    
     # ----------------------------------
     @staticmethod
-    def toState(pygazparData: list) -> str:
+    def toState(pygazparData: dict[FrequencyStr, list[Any]]) -> Union[float, None]:
 
         if len(pygazparData) > 0:
-            volumeIndex = int(pygazparData[Frequency.DAILY][LAST_INDEX].get(PropertyName.END_INDEX.value))
-            converterFactor = float(pygazparData[Frequency.DAILY][LAST_INDEX].get(PropertyName. CONVERTER_FACTOR.value))
+            volumeIndex = int(pygazparData[FrequencyStr.DAILY][LAST_INDEX].get(PropertyName.END_INDEX.value))
+            converterFactor = float(pygazparData[FrequencyStr.DAILY][LAST_INDEX].get(PropertyName. CONVERTER_FACTOR.value))
             return volumeIndex * converterFactor
         else:
             return None
 
     # ----------------------------------
     @staticmethod
-    def toAttributes(username: str, pygazparData: list, errorMessage: str) -> dict:
-
-        friendlyNameByFrequency = {
-            Frequency.HOURLY: "hourly",
-            Frequency.DAILY: "daily",
-            Frequency.WEEKLY: "weekly",
-            Frequency.MONTHLY: "monthly"
-        }
+    def toAttributes(username: str, pygazparData: dict[FrequencyStr, list[Any]], errorMessages: list[str]) -> dict[str, Any]:
 
         res = {
             ATTR_ATTRIBUTION: HA_ATTRIBUTION,
@@ -49,20 +41,24 @@ class Util:
             ATTR_ICON: ICON_GAS,
             ATTR_DEVICE_CLASS: DEVICE_CLASS_ENERGY,
             ATTR_STATE_CLASS: STATE_CLASS_TOTAL_INCREASING,
-            ATTR_ERROR_MESSAGE: errorMessage
+            ATTR_ERROR_MESSAGES: errorMessages,
+            str(FrequencyStr.DAILY): {},
+            str(FrequencyStr.WEEKLY): {},
+            str(FrequencyStr.MONTHLY): {},
+            str(FrequencyStr.YEARLY): {},
         }
 
-        for frequency in Frequency:
-            if frequency is not Frequency.HOURLY:  # Hourly not yet implemented.
+        for frequency in FrequencyStr:
+            if len(pygazparData) > 0:
+                data = pygazparData.get(frequency)
 
-                if len(pygazparData) > 0:
-                    data = pygazparData.get(frequency)
+                if data is not None and len(data) > 0:
+                    reversedData = data[::-1]
+                else:
+                    reversedData = []
 
-                    if data is not None and len(data) > 0:
-                        reversedData = data[::-1]
-                    else:
-                        reversedData = []
+                res[str(frequency)] = reversedData
+            else:
+                res[str(frequency)] = []
 
-                    res[friendlyNameByFrequency[frequency]] = reversedData
-
-        return res
+        return res  # type: ignore

@@ -3,4 +3,5 @@
 flake8
 pytest
 pygazpar
+pandas
 homeassistant == 2021.11.5

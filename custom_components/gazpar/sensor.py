@@ -5,12 +5,13 @@ import logging
 import traceback
 
 from pygazpar.client import Client
-from pygazpar.enum import PropertyName
-from pygazpar.enum import Frequency
+from pygazpar.enum import PropertyName, Frequency
 
 from .util import Util
+from .enum import FrequencyStr
 
 import voluptuous as vol
+import pandas as pd
 
 from homeassistant.components.sensor import PLATFORM_SCHEMA
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, CONF_SCAN_INTERVAL, ENERGY_KILO_WATT_HOUR
@@ -36,6 +37,7 @@ LAST_INDEX = -1
 DAILY_LAST_WEEK_INDEX = -14
 WEEKLY_LAST_MONTH_INDEX = -8
 MONTHLY_LAST_YEAR_INDEX = -24
+YEARLY_LAST_YEAR_INDEX = -5
 
 ICON_GAS = "mdi:fire"
 
@@ -43,10 +45,10 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_USERNAME): cv.string,
     vol.Required(CONF_PASSWORD): cv.string,
     vol.Required(CONF_PCE_IDENTIFIER): cv.string,
-    vol.Optional(CONF_WAITTIME, default=DEFAULT_WAITTIME): int,
+    vol.Optional(CONF_WAITTIME, default=DEFAULT_WAITTIME): int,  # type: ignore
     vol.Required(CONF_TMPDIR): cv.string,
-    vol.Optional(CONF_TESTMODE, default=DEFAULT_TESTMODE): bool,
-    vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): cv.time_period
+    vol.Optional(CONF_TESTMODE, default=DEFAULT_TESTMODE): bool,  # type: ignore
+    vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): cv.time_period  # type: ignore
 })
 
 
@@ -102,6 +104,14 @@ class GazparAccount:
         self._testMode = testMode
         self._dataByFrequency = {}
         self.sensors = []
+        self._errorMessages = []
+        self._frequencyStrByFrequency = {
+            Frequency.HOURLY: FrequencyStr.HOURLY,
+            Frequency.DAILY: FrequencyStr.DAILY,
+            Frequency.WEEKLY: FrequencyStr.WEEKLY,
+            Frequency.MONTHLY: FrequencyStr.MONTHLY,
+            # Frequency.YEARLY: FrequencyStr.YEARLY
+        }
 
         self.sensors.append(
             GazparSensor(SENSOR_NAME, PropertyName.ENERGY.value, ENERGY_KILO_WATT_HOUR, self))
@@ -118,31 +128,65 @@ class GazparAccount:
 
         _LOGGER.debug("Querying PyGazpar library for new data...")
 
-        try:
-            for frequency in Frequency:
-                if frequency is not Frequency.HOURLY:  # Hourly not yet implemented.
+        # Reset the error message.
+        self._errorMessages = []
+
+        for frequency in Frequency:
+
+            frequencyStr = self._frequencyStrByFrequency[frequency]
+
+            if frequency is not Frequency.HOURLY:  # Hourly not yet implemented.
+                try:
                     client = Client(username=self._username,
                                     password=self._password,
                                     pceIdentifier=self._pceIdentifier,
                                     meterReadingFrequency=frequency,
-                                    lastNDays=720,
+                                    lastNDays=1095,
                                     tmpDirectory=self._tmpdir,
                                     testMode=self._testMode)
                     client.update()
-                    self._dataByFrequency[frequency] = client.data()
 
-                    _LOGGER.debug(f"data[{frequency}]={json.dumps(self._dataByFrequency[frequency], indent=2)}")
+                    self._dataByFrequency[frequencyStr] = client.data()
 
-                    if event_time is not None:
-                        for sensor in self.sensors:
-                            sensor.async_schedule_update_ha_state(True)
-                        _LOGGER.debug(f"HA notified that new {frequency} data are available")
-                    _LOGGER.debug(f"New {frequency} data have been retrieved successfully from PyGazpar library")
+                    _LOGGER.debug(f"data[{frequencyStr}]={json.dumps(self._dataByFrequency[frequencyStr], indent=2)}")
 
-        except BaseException:
-            _LOGGER.error("Failed to query PyGazpar library with exception : %s", traceback.format_exc())
-            if event_time is None:
-                raise
+                    _LOGGER.debug(f"New {frequencyStr} data have been retrieved successfully from PyGazpar library")
+                except BaseException:
+                    self._dataByFrequency[frequencyStr] = {}
+                    errorMessage = f"Failed to query PyGazpar library for frequency={frequencyStr}. The exception has been raised: {traceback.format_exc()}"
+                    self._errorMessages.append(errorMessage)
+                    _LOGGER.error(errorMessage)
+                    if event_time is None:
+                        raise
+
+        self.computeYearlyData()
+
+        if event_time is not None:
+            for sensor in self.sensors:
+                sensor.async_schedule_update_ha_state(True)
+            _LOGGER.debug("HA notified that new data are available")
+
+    # ----------------------------------
+    # Compute yearly data from monthly data.
+    def computeYearlyData(self):
+
+        monthlyData = self._dataByFrequency.get(FrequencyStr.MONTHLY)
+
+        if monthlyData is not None and len(monthlyData) > 0:
+            df = pd.DataFrame(monthlyData)
+
+            # Trimming head and trailing spaces.
+            df["time_period"] = df["time_period"].str.strip()
+
+            df[["month", "year"]] = df["time_period"].str.split(" ", expand=True)
+
+            df = df[["year", "energy_kwh", "volume_m3"]].groupby("year", as_index=False).sum()
+
+            df = df.rename(columns={"year": "time_period"})
+
+            self._dataByFrequency[FrequencyStr.YEARLY] = df.to_dict('records')  # df.sort_values(by=['time_period'], ascending=False).to_dict('records')
+        else:
+            self._dataByFrequency[FrequencyStr.YEARLY] = {}
 
     # ----------------------------------
     @property
@@ -168,6 +212,12 @@ class GazparAccount:
         """Return the data dictionary by frequency."""
         return self._dataByFrequency
 
+    # ----------------------------------
+    @property
+    def errorMessages(self):
+        """Return the error messages."""
+        return self._errorMessages
+
 
 # --------------------------------------------------------------------------------------------
 class GazparSensor(Entity):
@@ -182,13 +232,13 @@ class GazparSensor(Entity):
         self._account = account
         self._username = account.username
         self._dataByFrequency = {}
-        self._errorMessage = ""
 
         self._lastIndexByFrequence = {
-            Frequency.HOURLY: LAST_INDEX,
-            Frequency.DAILY: DAILY_LAST_WEEK_INDEX,
-            Frequency.WEEKLY: WEEKLY_LAST_MONTH_INDEX,
-            Frequency.MONTHLY: MONTHLY_LAST_YEAR_INDEX,
+            FrequencyStr.HOURLY: LAST_INDEX,
+            FrequencyStr.DAILY: DAILY_LAST_WEEK_INDEX,
+            FrequencyStr.WEEKLY: WEEKLY_LAST_MONTH_INDEX,
+            FrequencyStr.MONTHLY: MONTHLY_LAST_YEAR_INDEX,
+            FrequencyStr.YEARLY: YEARLY_LAST_YEAR_INDEX,
         }
 
     # ----------------------------------
@@ -220,25 +270,24 @@ class GazparSensor(Entity):
     def extra_state_attributes(self):
         """Return the state attributes of the sensor."""
 
-        return Util.toAttributes(self._username, self._dataByFrequency, self._errorMessage)
+        return Util.toAttributes(self._username, self._dataByFrequency, self._account.errorMessages)
 
     # ----------------------------------
     def update(self):
         """Retrieve the new data for the sensor."""
 
-        _LOGGER.debug(f"HA requests its data to be updated...")
+        _LOGGER.debug("HA requests its data to be updated...")
         try:
 
-            for frequency in Frequency:
-                if frequency is not Frequency.HOURLY:  # Hourly not yet implemented.
+            for frequency in FrequencyStr:
 
-                    data = self._account.dataByFrequency.get(frequency)
+                data = self._account.dataByFrequency.get(frequency)
 
-                    if data is not None and len(data) > 0:
-                        self._dataByFrequency[frequency] = data[self._lastIndexByFrequence[frequency]:]
-                        _LOGGER.debug(f"HA {frequency} data have been updated successfully")
-                    else:
-                        _LOGGER.debug(f"No {frequency} data available yet for update")
+                if data is not None and len(data) > 0:
+                    self._dataByFrequency[frequency] = data[self._lastIndexByFrequence[frequency]:]
+                    _LOGGER.debug(f"HA {frequency} data have been updated successfully")
+                else:
+                    _LOGGER.debug(f"No {frequency} data available yet for update")
+
         except BaseException:
-            self._errorMessage = f"Failed to update {self._meterReadingFrequency} HA data with exception : {traceback.format_exc()}"
-            _LOGGER.error(self._errorMessage)
+            _LOGGER.error(f"Failed to update HA data. The exception has been raised: {traceback.format_exc()}")

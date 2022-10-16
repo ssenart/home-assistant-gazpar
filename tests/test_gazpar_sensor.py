@@ -1,5 +1,6 @@
 from custom_components.gazpar.sensor import CONF_PCE_IDENTIFIER, CONF_TESTMODE, setup_platform
 from custom_components.gazpar.sensor import CONF_USERNAME, CONF_PASSWORD, CONF_WAITTIME, CONF_TMPDIR, CONF_SCAN_INTERVAL
+from custom_components.gazpar.util import Util
 import os
 import logging
 import json
@@ -60,4 +61,26 @@ class TestGazparSensor:
             attributes = entity.device_state_attributes
 
             TestGazparSensor.logger.info(f"state={state}")
+            TestGazparSensor.logger.info(f"attributes={json.dumps(attributes, indent=2)}")
+
+    # ----------------------------------
+    def test_toAttribute(self):
+
+        config = {
+            CONF_USERNAME: os.environ["GRDF_USERNAME"],
+            CONF_PASSWORD: os.environ["GRDF_PASSWORD"],
+            CONF_PCE_IDENTIFIER: os.environ["PCE_IDENTIFIER"],
+            CONF_WAITTIME: 30,
+            CONF_TMPDIR: "./tmp",
+            CONF_SCAN_INTERVAL: 600,
+            CONF_TESTMODE: True
+        }
+
+        setup_platform(None, config, self.add_entities)
+
+        for entity in self._entities:
+            entity.update()
+
+            attributes = Util.toAttributes(entity._username, entity._dataByFrequency, [])
+
             TestGazparSensor.logger.info(f"attributes={json.dumps(attributes, indent=2)}")
