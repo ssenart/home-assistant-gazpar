@@ -180,9 +180,12 @@ class GazparAccount:
 
             df[["month", "year"]] = df["time_period"].str.split(" ", expand=True)
 
-            df = df[["year", "energy_kwh", "volume_m3"]].groupby("year", as_index=False).sum()
+            df = df[["year", "energy_kwh", "volume_m3"]].groupby("year").agg(energy_kwh=('energy_kwh', 'sum'), count=('energy_kwh', 'count')).reset_index()
 
-            df = df.rename(columns={"year": "time_period"})
+            # Select rows where we have a full year (12 months) except for the current year.
+            df = pd.concat([df[(df["count"] == 12)], df.tail(1)])
+
+            df = df.rename(columns={"year": "time_period", "sum": "energy_kwh"})
 
             self._dataByFrequency[FrequencyStr.YEARLY] = df.to_dict('records')  # df.sort_values(by=['time_period'], ascending=False).to_dict('records')
         else:

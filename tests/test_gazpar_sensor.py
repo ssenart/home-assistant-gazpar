@@ -73,7 +73,7 @@ class TestGazparSensor:
             CONF_WAITTIME: 30,
             CONF_TMPDIR: "./tmp",
             CONF_SCAN_INTERVAL: 600,
-            CONF_TESTMODE: False
+            CONF_TESTMODE: True
         }
 
         setup_platform(None, config, self.add_entities)
