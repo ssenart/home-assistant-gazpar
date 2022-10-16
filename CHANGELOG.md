@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.3.0] - 2022-10-16
 
 ### Added
+[#14](https://github.com/ssenart/home-assistant-gazpar/issues/14): [Feature] Add attribute 'version' to give the version number of the Gazpar Integration component.
+
 [#13](https://github.com/ssenart/home-assistant-gazpar/issues/13): [Feature] Add attribute errorMessages that displays all error messages raised while using PyGazpar library.
 
 [#12](https://github.com/ssenart/home-assistant-gazpar/issues/12): [Feature] Compute Yearly data from Monthly data.

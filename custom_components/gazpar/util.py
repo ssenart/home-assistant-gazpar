@@ -3,6 +3,7 @@ from homeassistant.const import CONF_USERNAME, ATTR_ATTRIBUTION, ATTR_UNIT_OF_ME
 from homeassistant.components.sensor import ATTR_STATE_CLASS, STATE_CLASS_TOTAL_INCREASING
 from typing import Any, Union
 from .enum import FrequencyStr
+from .manifest import Manifest
 
 HA_ATTRIBUTION = "Data provided by GrDF"
 
@@ -13,6 +14,7 @@ SENSOR_FRIENDLY_NAME = "Gazpar"
 LAST_INDEX = -1
 
 ATTR_PCE = "pce"
+ATTR_VERSION = "version"
 ATTR_ERROR_MESSAGES = "errorMessages"
 
 
@@ -37,6 +39,7 @@ class Util:
 
         res = {
             ATTR_ATTRIBUTION: HA_ATTRIBUTION,
+            ATTR_VERSION: Manifest.version(),
             CONF_USERNAME: username,
             ATTR_PCE: pceIdentifier,
             ATTR_UNIT_OF_MEASUREMENT: ENERGY_KILO_WATT_HOUR,
