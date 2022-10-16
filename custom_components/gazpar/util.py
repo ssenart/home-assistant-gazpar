@@ -26,10 +26,9 @@ class Util:
     def toState(pygazparData: dict[FrequencyStr, list[Any]]) -> Union[float, None]:
 
         if len(pygazparData) > 0:
-            volumeStartIndex = float(pygazparData[FrequencyStr.DAILY][LAST_INDEX].get(PropertyName.START_INDEX.value))
+            volumeEndIndex = float(pygazparData[FrequencyStr.DAILY][LAST_INDEX].get(PropertyName.END_INDEX.value))
             converterFactor = float(pygazparData[FrequencyStr.DAILY][LAST_INDEX].get(PropertyName. CONVERTER_FACTOR.value))
-            energy = float(pygazparData[FrequencyStr.DAILY][LAST_INDEX].get(PropertyName.ENERGY.value))
-            return volumeStartIndex * converterFactor + energy
+            return volumeEndIndex * converterFactor
         else:
             return None
 
