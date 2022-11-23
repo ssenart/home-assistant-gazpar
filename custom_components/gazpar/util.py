@@ -25,10 +25,22 @@ class Util:
     @staticmethod
     def toState(pygazparData: dict[FrequencyStr, list[Any]]) -> Union[float, None]:
 
+        dailyData = pygazparData[FrequencyStr.DAILY]
+
         if len(pygazparData) > 0:
-            volumeEndIndex = float(pygazparData[FrequencyStr.DAILY][LAST_INDEX].get(PropertyName.END_INDEX.value))
-            converterFactor = float(pygazparData[FrequencyStr.DAILY][LAST_INDEX].get(PropertyName. CONVERTER_FACTOR.value))
-            return volumeEndIndex * converterFactor
+            currentIndex = len(dailyData) - 1
+            cumulativeEnergy = 0.0
+
+            # For low consumption, we also use the energy column in addition to the volume index columns
+            # and compute more accurately the consumed energy.
+            while (currentIndex >= 0) and (float(dailyData[currentIndex].get(PropertyName.START_INDEX.value)) == float(dailyData[currentIndex].get(PropertyName.END_INDEX.value))):
+                cumulativeEnergy += float(dailyData[currentIndex].get(PropertyName.ENERGY.value))
+                currentIndex -= 1
+
+            volumeEndIndex = float(dailyData[currentIndex].get(PropertyName.END_INDEX.value))
+            converterFactor = float(dailyData[currentIndex].get(PropertyName.CONVERTER_FACTOR.value))
+
+            return volumeEndIndex * converterFactor + cumulativeEnergy
         else:
             return None
 

@@ -1,6 +1,7 @@
 from custom_components.gazpar.sensor import CONF_PCE_IDENTIFIER, CONF_TESTMODE, setup_platform
 from custom_components.gazpar.sensor import CONF_USERNAME, CONF_PASSWORD, CONF_WAITTIME, CONF_TMPDIR, CONF_SCAN_INTERVAL
 from custom_components.gazpar.util import Util
+from custom_components.gazpar.enum import FrequencyStr
 import os
 import logging
 import json
@@ -84,3 +85,31 @@ class TestGazparSensor:
             attributes = Util.toAttributes(config[CONF_USERNAME], config[CONF_PCE_IDENTIFIER], entity._dataByFrequency, [])
 
             TestGazparSensor.logger.info(f"attributes={json.dumps(attributes, indent=2)}")
+
+    # ----------------------------------
+    def test_toState_low(self):
+
+        with open('tests/resources/low_daily_data.json') as f:
+            data = {
+                FrequencyStr.DAILY: json.load(f)
+            }
+
+        state = Util.toState(data)
+
+        assert (state == 154397.136)
+
+        TestGazparSensor.logger.info(f"state={state}")
+
+    # ----------------------------------
+    def test_toState_high(self):
+
+        with open('tests/resources/high_daily_data.json') as f:
+            data = {
+                FrequencyStr.DAILY: json.load(f)
+            }
+
+        state = Util.toState(data)
+
+        assert (state == 154405.404)
+
+        TestGazparSensor.logger.info(f"state={state}")        
