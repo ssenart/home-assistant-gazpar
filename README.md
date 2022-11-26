@@ -49,7 +49,7 @@ Restart your HA application. In HA development panel, you should see the new Gaz
 - sensor.gazpar:
 ```yaml
 attribution: Data provided by GrDF
-username: titi.toto@tata.Fr
+username: titi.toto@tata.fr
 pce: 123456789
 unit_of_measurement: kWh
 friendly_name: Gazpar
@@ -138,7 +138,7 @@ template:
       state: >   
         {{ states('sensor.gazpar') | float(0) }}
       icon: mdi:fire
-      device_class: energy
+      device_class: gas
       state_class: total_increasing
 ```
 

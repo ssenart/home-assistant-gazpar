@@ -1,5 +1,5 @@
 from pygazpar.enum import PropertyName
-from homeassistant.const import CONF_USERNAME, ATTR_ATTRIBUTION, ATTR_UNIT_OF_MEASUREMENT, ATTR_FRIENDLY_NAME, ATTR_ICON, ATTR_DEVICE_CLASS, ENERGY_KILO_WATT_HOUR, DEVICE_CLASS_ENERGY
+from homeassistant.const import CONF_USERNAME, ATTR_ATTRIBUTION, ATTR_UNIT_OF_MEASUREMENT, ATTR_FRIENDLY_NAME, ATTR_ICON, ATTR_DEVICE_CLASS, ENERGY_KILO_WATT_HOUR, DEVICE_CLASS_GAS
 from homeassistant.components.sensor import ATTR_STATE_CLASS, STATE_CLASS_TOTAL_INCREASING
 from typing import Any, Union
 from .enum import FrequencyStr
@@ -25,9 +25,10 @@ class Util:
     @staticmethod
     def toState(pygazparData: dict[FrequencyStr, list[Any]]) -> Union[float, None]:
 
-        dailyData = pygazparData[FrequencyStr.DAILY]
-
         if len(pygazparData) > 0:
+
+            dailyData = pygazparData[FrequencyStr.DAILY]
+
             currentIndex = len(dailyData) - 1
             cumulativeEnergy = 0.0
 
@@ -56,7 +57,7 @@ class Util:
             ATTR_UNIT_OF_MEASUREMENT: ENERGY_KILO_WATT_HOUR,
             ATTR_FRIENDLY_NAME: SENSOR_FRIENDLY_NAME,
             ATTR_ICON: ICON_GAS,
-            ATTR_DEVICE_CLASS: DEVICE_CLASS_ENERGY,
+            ATTR_DEVICE_CLASS: DEVICE_CLASS_GAS,
             ATTR_STATE_CLASS: STATE_CLASS_TOTAL_INCREASING,
             ATTR_ERROR_MESSAGES: errorMessages,
             str(FrequencyStr.HOURLY): {},
