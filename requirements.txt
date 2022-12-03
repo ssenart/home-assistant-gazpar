@@ -2,6 +2,6 @@
 --extra-index-url https://pypi.org/simple
 flake8
 pytest
-pygazpar
+pygazpar >= 1.2.0a45
 pandas
-homeassistant
+homeassistant == 2021.11.5

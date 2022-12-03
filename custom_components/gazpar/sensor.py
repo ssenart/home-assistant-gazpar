@@ -5,10 +5,11 @@ import logging
 import traceback
 
 from pygazpar.client import Client
+from pygazpar.datasource import JsonWebDataSource
 from pygazpar.enum import PropertyName, Frequency
 
-from .util import Util
-from .enum import FrequencyStr
+from custom_components.gazpar.util import Util
+from custom_components.gazpar.enum import FrequencyStr
 
 import voluptuous as vol
 import pandas as pd
@@ -93,7 +94,7 @@ class GazparAccount:
     """Representation of a Gazpar account."""
 
     # ----------------------------------
-    def __init__(self, hass, username: str, password: str, pceIdentifier: str, wait_time: int, tmpdir: str, scan_interval: int, testMode: bool):
+    def __init__(self, hass, username: str, password: str, pceIdentifier: str, wait_time: int, tmpdir: str, scan_interval: timedelta, testMode: bool):
         """Initialise the Gazpar account."""
         self._username = username
         self._password = password
@@ -110,7 +111,7 @@ class GazparAccount:
             Frequency.DAILY: FrequencyStr.DAILY,
             Frequency.WEEKLY: FrequencyStr.WEEKLY,
             Frequency.MONTHLY: FrequencyStr.MONTHLY,
-            # Frequency.YEARLY: FrequencyStr.YEARLY
+            Frequency.YEARLY: FrequencyStr.YEARLY
         }
 
         self.sensors.append(
@@ -137,16 +138,9 @@ class GazparAccount:
 
             if frequency is not Frequency.HOURLY:  # Hourly not yet implemented.
                 try:
-                    client = Client(username=self._username,
-                                    password=self._password,
-                                    pceIdentifier=self._pceIdentifier,
-                                    meterReadingFrequency=frequency,
-                                    lastNDays=1095,
-                                    tmpDirectory=self._tmpdir,
-                                    testMode=self._testMode)
-                    client.update()
+                    client = Client(JsonWebDataSource(self._username, self._password))
 
-                    self._dataByFrequency[frequencyStr] = client.data()
+                    self._dataByFrequency[frequencyStr] = client.loadSince(self._pceIdentifier, 1095, frequency)
 
                     _LOGGER.debug(f"data[{frequencyStr}]={json.dumps(self._dataByFrequency[frequencyStr], indent=2)}")
 
