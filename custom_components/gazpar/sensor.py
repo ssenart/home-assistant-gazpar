@@ -5,14 +5,13 @@ import logging
 import traceback
 
 from pygazpar.client import Client
-from pygazpar.datasource import JsonWebDataSource
+from pygazpar.datasource import JsonWebDataSource, TestDataSource
 from pygazpar.enum import PropertyName, Frequency
 
 from custom_components.gazpar.util import Util
 from custom_components.gazpar.enum import FrequencyStr
 
 import voluptuous as vol
-import pandas as pd
 
 from homeassistant.components.sensor import PLATFORM_SCHEMA
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, CONF_SCAN_INTERVAL, ENERGY_KILO_WATT_HOUR
@@ -138,7 +137,10 @@ class GazparAccount:
 
             if frequency is not Frequency.HOURLY:  # Hourly not yet implemented.
                 try:
-                    client = Client(JsonWebDataSource(self._username, self._password))
+                    if (self._testMode):
+                        client = Client(TestDataSource())
+                    else:   
+                        client = Client(JsonWebDataSource(self._username, self._password))
 
                     self._dataByFrequency[frequencyStr] = client.loadSince(self._pceIdentifier, 1095, frequency)
 
@@ -153,37 +155,10 @@ class GazparAccount:
                     if event_time is None:
                         raise
 
-        self.computeYearlyData()
-
         if event_time is not None:
             for sensor in self.sensors:
                 sensor.async_schedule_update_ha_state(True)
             _LOGGER.debug("HA notified that new data are available")
-
-    # ----------------------------------
-    # Compute yearly data from monthly data.
-    def computeYearlyData(self):
-
-        monthlyData = self._dataByFrequency.get(FrequencyStr.MONTHLY)
-
-        if monthlyData is not None and len(monthlyData) > 0:
-            df = pd.DataFrame(monthlyData)
-
-            # Trimming head and trailing spaces.
-            df["time_period"] = df["time_period"].str.strip()
-
-            df[["month", "year"]] = df["time_period"].str.split(" ", expand=True)
-
-            df = df[["year", "energy_kwh", "volume_m3"]].groupby("year").agg(energy_kwh=('energy_kwh', 'sum'), count=('energy_kwh', 'count')).reset_index()
-
-            # Select rows where we have a full year (12 months) except for the current year.
-            df = pd.concat([df[(df["count"] == 12)], df.tail(1)])
-
-            df = df.rename(columns={"year": "time_period", "sum": "energy_kwh"})
-
-            self._dataByFrequency[FrequencyStr.YEARLY] = df.to_dict('records')  # df.sort_values(by=['time_period'], ascending=False).to_dict('records')
-        else:
-            self._dataByFrequency[FrequencyStr.YEARLY] = {}
 
     # ----------------------------------
     @property

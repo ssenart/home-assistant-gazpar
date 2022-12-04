@@ -2,8 +2,9 @@ from pygazpar.enum import PropertyName
 from homeassistant.const import CONF_USERNAME, ATTR_ATTRIBUTION, ATTR_UNIT_OF_MEASUREMENT, ATTR_FRIENDLY_NAME, ATTR_ICON, ATTR_DEVICE_CLASS, ENERGY_KILO_WATT_HOUR, DEVICE_CLASS_GAS
 from homeassistant.components.sensor import ATTR_STATE_CLASS, STATE_CLASS_TOTAL_INCREASING
 from typing import Any, Union
-from .enum import FrequencyStr
-from .manifest import Manifest
+
+from custom_components.gazpar.enum import FrequencyStr
+from custom_components.gazpar.manifest import Manifest
 
 HA_ATTRIBUTION = "Data provided by GrDF"
 

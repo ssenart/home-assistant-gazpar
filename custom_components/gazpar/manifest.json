@@ -5,8 +5,7 @@
   "version": "1.3.4a1",
   "issue_tracker": "https://github.com/ssenart/ha-custom_components/issues",
   "requirements": [
-    "pygazpar==1.2.0a45",
-    "pandas"
+    "pygazpar==1.2.0a51"
   ],
   "dependencies": [],
   "codeowners": [
