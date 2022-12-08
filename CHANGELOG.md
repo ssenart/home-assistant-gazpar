@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 [#30](https://github.com/ssenart/home-assistant-gazpar/issues/30): Upgrade PyGazpar to version 1.2.0.
 
+[#27](https://github.com/ssenart/home-assistant-gazpar/issues/27): Energy Dashboard - Unit error - Regression in HA 2022.11.
+
 ### Fixed
 [#28](https://github.com/ssenart/home-assistant-gazpar/issues/28): [Issue] No data update - GrDF web site is half broken - Download button does not work anymore.
 

@@ -138,7 +138,7 @@ template:
       state: >   
         {{ states('sensor.gazpar') | float(0) }}
       icon: mdi:fire
-      device_class: gas
+      device_class: energy
       state_class: total_increasing
 ```
 
