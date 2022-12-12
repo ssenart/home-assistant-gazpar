@@ -1,7 +1,7 @@
 from pygazpar.enum import PropertyName, Frequency
 from homeassistant.const import CONF_USERNAME, ATTR_ATTRIBUTION, ATTR_UNIT_OF_MEASUREMENT, ATTR_FRIENDLY_NAME, ATTR_ICON, ATTR_DEVICE_CLASS, ENERGY_KILO_WATT_HOUR, DEVICE_CLASS_ENERGY
 from homeassistant.components.sensor import ATTR_STATE_CLASS, STATE_CLASS_TOTAL_INCREASING
-from typing import Any
+from typing import Any, Union
 
 from custom_components.gazpar.manifest import Manifest  
 
@@ -23,7 +23,7 @@ class Util:
 
     # ----------------------------------
     @staticmethod
-    def toState(pygazparData: dict[str, list[dict[str, Any]]]) -> float | None:
+    def toState(pygazparData: dict[str, list[dict[str, Any]]]) -> Union[float, None]:
 
         if len(pygazparData) > 0:
 
