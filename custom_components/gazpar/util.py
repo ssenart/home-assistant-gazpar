@@ -29,14 +29,14 @@ class Util:
 
             dailyData = pygazparData[Frequency.DAILY.value]
 
-            currentIndex = len(dailyData) - 1
+            currentIndex = 0
             cumulativeEnergy = 0.0
 
             # For low consumption, we also use the energy column in addition to the volume index columns
             # and compute more accurately the consumed energy.
-            while (currentIndex >= 0) and (float(dailyData[currentIndex][PropertyName.START_INDEX.value]) == float(dailyData[currentIndex][PropertyName.END_INDEX.value])):
+            while (currentIndex < len(dailyData)) and (float(dailyData[currentIndex][PropertyName.START_INDEX.value]) == float(dailyData[currentIndex][PropertyName.END_INDEX.value])):
                 cumulativeEnergy += float(dailyData[currentIndex][PropertyName.ENERGY.value])
-                currentIndex -= 1
+                currentIndex += 1
 
             volumeEndIndex = float(dailyData[currentIndex][PropertyName.END_INDEX.value])
             converterFactor = float(dailyData[currentIndex][PropertyName.CONVERTER_FACTOR.value])
