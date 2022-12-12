@@ -25,25 +25,28 @@ class Util:
     @staticmethod
     def toState(pygazparData: dict[str, list[dict[str, Any]]]) -> Union[float, None]:
 
+        res = None
+
         if len(pygazparData) > 0:
 
             dailyData = pygazparData[Frequency.DAILY.value]
 
-            currentIndex = 0
-            cumulativeEnergy = 0.0
+            if dailyData is not None and len(dailyData) > 0:
+                currentIndex = 0
+                cumulativeEnergy = 0.0
 
-            # For low consumption, we also use the energy column in addition to the volume index columns
-            # and compute more accurately the consumed energy.
-            while (currentIndex < len(dailyData)) and (float(dailyData[currentIndex][PropertyName.START_INDEX.value]) == float(dailyData[currentIndex][PropertyName.END_INDEX.value])):
-                cumulativeEnergy += float(dailyData[currentIndex][PropertyName.ENERGY.value])
-                currentIndex += 1
+                # For low consumption, we also use the energy column in addition to the volume index columns
+                # and compute more accurately the consumed energy.
+                while (currentIndex < len(dailyData)) and (float(dailyData[currentIndex][PropertyName.START_INDEX.value]) == float(dailyData[currentIndex][PropertyName.END_INDEX.value])):
+                    cumulativeEnergy += float(dailyData[currentIndex][PropertyName.ENERGY.value])
+                    currentIndex += 1
 
-            volumeEndIndex = float(dailyData[currentIndex][PropertyName.END_INDEX.value])
-            converterFactor = float(dailyData[currentIndex][PropertyName.CONVERTER_FACTOR.value])
+                volumeEndIndex = float(dailyData[currentIndex][PropertyName.END_INDEX.value])
+                converterFactor = float(dailyData[currentIndex][PropertyName.CONVERTER_FACTOR.value])
 
-            return volumeEndIndex * converterFactor + cumulativeEnergy
-        else:
-            return None
+                res = volumeEndIndex * converterFactor + cumulativeEnergy
+
+        return res
 
     # ----------------------------------
     @staticmethod
