@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 [#24](https://github.com/ssenart/home-assistant-gazpar/issues/24): [Bug] gas_energy not showing in the energy dashboard
 
+[#24](https://github.com/ssenart/home-assistant-gazpar/issues/24): [Bug] gas_energy not showing in the energy dashboard
+
 [#28](https://github.com/ssenart/home-assistant-gazpar/issues/28): [Issue] No data update - GrDF web site is half broken - Download button does not work anymore.
 
 ## [1.3.3] - 2022-11-26
