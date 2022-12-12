@@ -124,22 +124,21 @@ For that, I'm using the 2 steps configuration method:
 - Step 1 : Create a dedicated meter sensor using template:
 
 ```yaml
-template:
-  - sensor:
-    - name: gas_volume
-      unit_of_measurement: 'm³'
-      state: >
-        {{ state_attr('sensor.gazpar', 'daily')[0]['end_index_m3'] | float(0) }}
-      icon: mdi:fire
-      device_class: gas
-      state_class: total_increasing
-    - name: gas_energy
-      unit_of_measurement: 'kWh'      
-      state: >   
-        {{ states('sensor.gazpar') | float(0) }}
-      icon: mdi:fire
-      device_class: energy
-      state_class: total_increasing
+- sensor:
+  - name: gas_volume
+    unit_of_measurement: 'm³'
+    state: >
+      {{ state_attr('sensor.gazpar', 'daily')[0]['start_index_m3'] + state_attr('sensor.gazpar', 'daily')[0]['volume_m3']}}
+    icon: mdi:fire
+    device_class: gas
+    state_class: total_increasing
+  - name: gas_energy
+    unit_of_measurement: 'kWh'      
+    state: >
+      {{ states('sensor.gazpar') }}
+    icon: mdi:fire
+    device_class: energy
+    state_class: total_increasing
 ```
 
 - Step 2 : Setup utility_meter to get consumptions by period:

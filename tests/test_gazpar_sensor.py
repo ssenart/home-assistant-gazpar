@@ -1,7 +1,7 @@
-from custom_components.gazpar.sensor import CONF_PCE_IDENTIFIER, CONF_TESTMODE, setup_platform
+from custom_components.gazpar.sensor import CONF_PCE_IDENTIFIER, CONF_DATASOURCE, setup_platform
 from custom_components.gazpar.sensor import CONF_USERNAME, CONF_PASSWORD, CONF_WAITTIME, CONF_TMPDIR, CONF_SCAN_INTERVAL
 from custom_components.gazpar.util import Util
-from custom_components.gazpar.enum import FrequencyStr
+from pygazpar.enum import Frequency
 import os
 import logging
 import json
@@ -28,7 +28,7 @@ class TestGazparSensor:
             CONF_WAITTIME: 30,
             CONF_TMPDIR: "./tmp",
             CONF_SCAN_INTERVAL: 600,
-            CONF_TESTMODE: False
+            CONF_DATASOURCE: "json"
         }
 
         setup_platform(None, config, self.add_entities)
@@ -51,7 +51,7 @@ class TestGazparSensor:
             CONF_WAITTIME: 30,
             CONF_TMPDIR: "./tmp",
             CONF_SCAN_INTERVAL: 600,
-            CONF_TESTMODE: True
+            CONF_DATASOURCE: "test"
         }
 
         setup_platform(None, config, self.add_entities)
@@ -74,7 +74,7 @@ class TestGazparSensor:
             CONF_WAITTIME: 30,
             CONF_TMPDIR: "./tmp",
             CONF_SCAN_INTERVAL: 600,
-            CONF_TESTMODE: True
+            CONF_DATASOURCE: "test"
         }
 
         setup_platform(None, config, self.add_entities)
@@ -91,7 +91,7 @@ class TestGazparSensor:
 
         with open('tests/resources/low_daily_data.json') as f:
             data = {
-                FrequencyStr.DAILY: json.load(f)
+                Frequency.DAILY.value: json.load(f)
             }
 
         state = Util.toState(data)
@@ -105,11 +105,11 @@ class TestGazparSensor:
 
         with open('tests/resources/high_daily_data.json') as f:
             data = {
-                FrequencyStr.DAILY: json.load(f)
+                Frequency.DAILY.value: json.load(f)
             }
 
         state = Util.toState(data)
 
         assert (state == 154405.404)
 
-        TestGazparSensor.logger.info(f"state={state}")        
+        TestGazparSensor.logger.info(f"state={state}")

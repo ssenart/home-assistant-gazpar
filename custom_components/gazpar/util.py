@@ -1,10 +1,9 @@
-from pygazpar.enum import PropertyName
+from pygazpar.enum import PropertyName, Frequency
 from homeassistant.const import CONF_USERNAME, ATTR_ATTRIBUTION, ATTR_UNIT_OF_MEASUREMENT, ATTR_FRIENDLY_NAME, ATTR_ICON, ATTR_DEVICE_CLASS, ENERGY_KILO_WATT_HOUR, DEVICE_CLASS_ENERGY
 from homeassistant.components.sensor import ATTR_STATE_CLASS, STATE_CLASS_TOTAL_INCREASING
-from typing import Any, Union
+from typing import Any
 
-from custom_components.gazpar.enum import FrequencyStr
-from custom_components.gazpar.manifest import Manifest
+from custom_components.gazpar.manifest import Manifest  
 
 HA_ATTRIBUTION = "Data provided by GrDF"
 
@@ -24,23 +23,23 @@ class Util:
 
     # ----------------------------------
     @staticmethod
-    def toState(pygazparData: dict[FrequencyStr, list[Any]]) -> Union[float, None]:
+    def toState(pygazparData: dict[str, list[dict[str, Any]]]) -> float | None:
 
         if len(pygazparData) > 0:
 
-            dailyData = pygazparData[FrequencyStr.DAILY]
+            dailyData = pygazparData[Frequency.DAILY.value]
 
             currentIndex = len(dailyData) - 1
             cumulativeEnergy = 0.0
 
             # For low consumption, we also use the energy column in addition to the volume index columns
             # and compute more accurately the consumed energy.
-            while (currentIndex >= 0) and (float(dailyData[currentIndex].get(PropertyName.START_INDEX.value)) == float(dailyData[currentIndex].get(PropertyName.END_INDEX.value))):
-                cumulativeEnergy += float(dailyData[currentIndex].get(PropertyName.ENERGY.value))
+            while (currentIndex >= 0) and (float(dailyData[currentIndex][PropertyName.START_INDEX.value]) == float(dailyData[currentIndex][PropertyName.END_INDEX.value])):
+                cumulativeEnergy += float(dailyData[currentIndex][PropertyName.ENERGY.value])
                 currentIndex -= 1
 
-            volumeEndIndex = float(dailyData[currentIndex].get(PropertyName.END_INDEX.value))
-            converterFactor = float(dailyData[currentIndex].get(PropertyName.CONVERTER_FACTOR.value))
+            volumeEndIndex = float(dailyData[currentIndex][PropertyName.END_INDEX.value])
+            converterFactor = float(dailyData[currentIndex][PropertyName.CONVERTER_FACTOR.value])
 
             return volumeEndIndex * converterFactor + cumulativeEnergy
         else:
@@ -48,7 +47,7 @@ class Util:
 
     # ----------------------------------
     @staticmethod
-    def toAttributes(username: str, pceIdentifier: str, pygazparData: dict[FrequencyStr, list[Any]], errorMessages: list[str]) -> dict[str, Any]:
+    def toAttributes(username: str, pceIdentifier: str, pygazparData: dict[str, list[dict[str, Any]]], errorMessages: list[str]) -> dict[str, Any]:
 
         res = {
             ATTR_ATTRIBUTION: HA_ATTRIBUTION,
@@ -61,24 +60,20 @@ class Util:
             ATTR_DEVICE_CLASS: DEVICE_CLASS_ENERGY,
             ATTR_STATE_CLASS: STATE_CLASS_TOTAL_INCREASING,
             ATTR_ERROR_MESSAGES: errorMessages,
-            str(FrequencyStr.HOURLY): {},
-            str(FrequencyStr.DAILY): {},
-            str(FrequencyStr.WEEKLY): {},
-            str(FrequencyStr.MONTHLY): {},
-            str(FrequencyStr.YEARLY): {},
+            str(Frequency.HOURLY): {},
+            str(Frequency.DAILY): {},
+            str(Frequency.WEEKLY): {},
+            str(Frequency.MONTHLY): {},
+            str(Frequency.YEARLY): {},
         }
 
-        for frequency in FrequencyStr:
-            if len(pygazparData) > 0:
-                data = pygazparData.get(frequency)
+        if len(pygazparData) > 0:
+            for frequency in Frequency:
+                data = pygazparData.get(frequency.value)
 
                 if data is not None and len(data) > 0:
-                    reversedData = data[::-1]
+                    res[str(frequency)] = data
                 else:
-                    reversedData = []
-
-                res[str(frequency)] = reversedData
-            else:
-                res[str(frequency)] = []
+                    res[str(frequency)] = []
 
         return res  # type: ignore

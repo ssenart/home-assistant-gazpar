@@ -3,13 +3,14 @@ from datetime import timedelta
 import json
 import logging
 import traceback
+from datetime import datetime
 
 from pygazpar.client import Client
-from pygazpar.datasource import JsonWebDataSource, TestDataSource
+from pygazpar.datasource import JsonWebDataSource, ExcelWebDataSource, TestDataSource
 from pygazpar.enum import PropertyName, Frequency
+from typing import Any
 
 from custom_components.gazpar.util import Util
-from custom_components.gazpar.enum import FrequencyStr
 
 import voluptuous as vol
 
@@ -24,20 +25,15 @@ _LOGGER = logging.getLogger(__name__)
 CONF_PCE_IDENTIFIER = "pce_identifier"
 CONF_WAITTIME = "wait_time"
 CONF_TMPDIR = "tmpdir"
-CONF_TESTMODE = "test_mode"
+CONF_DATASOURCE = "datasource"
 
 DEFAULT_SCAN_INTERVAL = timedelta(hours=4)
 DEFAULT_WAITTIME = 30
-DEFAULT_TESTMODE = False
+DEFAULT_DATASOURCE = "json"
 
 SENSOR_NAME = "Gazpar"
 
 LAST_INDEX = -1
-
-DAILY_LAST_WEEK_INDEX = -14
-WEEKLY_LAST_MONTH_INDEX = -24
-MONTHLY_LAST_YEAR_INDEX = -24
-YEARLY_LAST_YEAR_INDEX = -5
 
 ICON_GAS = "mdi:fire"
 
@@ -47,7 +43,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_PCE_IDENTIFIER): cv.string,
     vol.Optional(CONF_WAITTIME, default=DEFAULT_WAITTIME): int,  # type: ignore
     vol.Required(CONF_TMPDIR): cv.string,
-    vol.Optional(CONF_TESTMODE, default=DEFAULT_TESTMODE): bool,  # type: ignore
+    vol.Optional(CONF_DATASOURCE, default=DEFAULT_DATASOURCE): cv.string,  # type: ignore
     vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): cv.time_period  # type: ignore
 })
 
@@ -74,13 +70,13 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
         tmpdir = config[CONF_TMPDIR]
         _LOGGER.debug(f"tmpdir={tmpdir}")
 
-        testMode = config[CONF_TESTMODE]
-        _LOGGER.debug(f"testMode={testMode}")
+        datasource = config[CONF_DATASOURCE]
+        _LOGGER.debug(f"datasource={datasource}")
 
         scan_interval = config[CONF_SCAN_INTERVAL]
         _LOGGER.debug(f"scan_interval={scan_interval}")
 
-        account = GazparAccount(hass, username, password, pceIdentifier, wait_time, tmpdir, scan_interval, testMode)
+        account = GazparAccount(hass, username, password, pceIdentifier, wait_time, tmpdir, scan_interval, datasource)
         add_entities(account.sensors, True)
         _LOGGER.debug("Gazpar platform initialization has completed successfully")
     except BaseException:
@@ -93,7 +89,7 @@ class GazparAccount:
     """Representation of a Gazpar account."""
 
     # ----------------------------------
-    def __init__(self, hass, username: str, password: str, pceIdentifier: str, wait_time: int, tmpdir: str, scan_interval: timedelta, testMode: bool):
+    def __init__(self, hass, username: str, password: str, pceIdentifier: str, wait_time: int, tmpdir: str, scan_interval: timedelta, datasource: str):
         """Initialise the Gazpar account."""
         self._username = username
         self._password = password
@@ -101,17 +97,10 @@ class GazparAccount:
         self._wait_time = wait_time
         self._tmpdir = tmpdir
         self._scan_interval = scan_interval
-        self._testMode = testMode
+        self._datasource = datasource
         self._dataByFrequency = {}
         self.sensors = []
         self._errorMessages = []
-        self._frequencyStrByFrequency = {
-            Frequency.HOURLY: FrequencyStr.HOURLY,
-            Frequency.DAILY: FrequencyStr.DAILY,
-            Frequency.WEEKLY: FrequencyStr.WEEKLY,
-            Frequency.MONTHLY: FrequencyStr.MONTHLY,
-            Frequency.YEARLY: FrequencyStr.YEARLY
-        }
 
         self.sensors.append(
             GazparSensor(SENSOR_NAME, PropertyName.ENERGY.value, ENERGY_KILO_WATT_HOUR, self))
@@ -131,29 +120,28 @@ class GazparAccount:
         # Reset the error message.
         self._errorMessages = []
 
-        for frequency in Frequency:
+        try:
+            if self._datasource == "test":
+                client = Client(TestDataSource())
+            elif self._datasource == "json":
+                client = Client(JsonWebDataSource(self._username, self._password))
+            elif self._datasource == "excel":
+                client = Client(ExcelWebDataSource(self._username, self._password, self._tmpdir))
+            else:
+                raise Exception(f"Invalid datasource value: '{self._datasource}' (valid values are: json | excel | test)")
 
-            frequencyStr = self._frequencyStrByFrequency[frequency]
+            self._dataByFrequency = client.loadSince(self._pceIdentifier, 1095)
 
-            if frequency is not Frequency.HOURLY:  # Hourly not yet implemented.
-                try:
-                    if (self._testMode):
-                        client = Client(TestDataSource())
-                    else:   
-                        client = Client(JsonWebDataSource(self._username, self._password))
+            _LOGGER.debug(f"data={json.dumps(self._dataByFrequency, indent=2)}")
 
-                    self._dataByFrequency[frequencyStr] = client.loadSince(self._pceIdentifier, 1095, frequency)
-
-                    _LOGGER.debug(f"data[{frequencyStr}]={json.dumps(self._dataByFrequency[frequencyStr], indent=2)}")
-
-                    _LOGGER.debug(f"New {frequencyStr} data have been retrieved successfully from PyGazpar library")
-                except BaseException:
-                    self._dataByFrequency[frequencyStr] = {}
-                    errorMessage = f"Failed to query PyGazpar library for frequency={frequencyStr}. The exception has been raised: {traceback.format_exc()}"
-                    self._errorMessages.append(errorMessage)
-                    _LOGGER.error(errorMessage)
-                    if event_time is None:
-                        raise
+            _LOGGER.debug("New data have been retrieved successfully from PyGazpar library")
+        except BaseException as exception:
+            self._dataByFrequency = {}
+            errorMessage = f"Failed to query PyGazpar library. The exception has been raised: {0}"
+            self._errorMessages.append(errorMessage.format(str(exception)))
+            _LOGGER.error(errorMessage.format(traceback.format_exc()))
+            if event_time is None:
+                raise
 
         if event_time is not None:
             for sensor in self.sensors:
@@ -203,13 +191,12 @@ class GazparSensor(Entity):
         self._unit = unit
         self._account = account
         self._dataByFrequency = {}
-
-        self._lastIndexByFrequence = {
-            FrequencyStr.HOURLY: LAST_INDEX,
-            FrequencyStr.DAILY: DAILY_LAST_WEEK_INDEX,
-            FrequencyStr.WEEKLY: WEEKLY_LAST_MONTH_INDEX,
-            FrequencyStr.MONTHLY: MONTHLY_LAST_YEAR_INDEX,
-            FrequencyStr.YEARLY: YEARLY_LAST_YEAR_INDEX,
+        self._selectByFrequence = {
+            Frequency.HOURLY: GazparSensor.__selectHourly,
+            Frequency.DAILY: GazparSensor.__selectDaily,
+            Frequency.WEEKLY: GazparSensor.__selectWeekly,
+            Frequency.MONTHLY: GazparSensor.__selectMonthly,
+            Frequency.YEARLY: GazparSensor.__selectYearly,
         }
 
     # ----------------------------------
@@ -250,15 +237,81 @@ class GazparSensor(Entity):
         _LOGGER.debug("HA requests its data to be updated...")
         try:
 
-            for frequency in FrequencyStr:
-
-                data = self._account.dataByFrequency.get(frequency)
+            # PyGazpar delivers data sorted by ascending dates.
+            # Below, we reverse the order. We want most recent at the top.
+            # And we select a subset of the readings by frequency.
+            for frequency in Frequency:
+                data = self._account.dataByFrequency.get(frequency.value)
 
                 if data is not None and len(data) > 0:
-                    self._dataByFrequency[frequency] = data[self._lastIndexByFrequence[frequency]:]
+                    self._dataByFrequency[frequency.value] = self._selectByFrequence[frequency](data[::-1])
                     _LOGGER.debug(f"HA {frequency} data have been updated successfully")
                 else:
+                    self._dataByFrequency[frequency.value] = []
                     _LOGGER.debug(f"No {frequency} data available yet for update")
 
         except BaseException:
             _LOGGER.error(f"Failed to update HA data. The exception has been raised: {traceback.format_exc()}")
+
+    MAX_DAILY_READINGS = 14
+    MAX_WEEKLY_READINGS = 20
+    MAX_MONTHLY_READINGS = 24
+    MAX_YEARLY_READINGS = 5
+
+    DATE_FORMAT = "%d/%m/%Y"
+
+    # ----------------------------------
+    @staticmethod
+    def __selectHourly(data: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        return data
+
+    # ----------------------------------
+    @staticmethod
+    def __selectDaily(data: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        return data[:GazparSensor.MAX_DAILY_READINGS]
+
+    # ----------------------------------
+    @staticmethod
+    def __selectWeekly(data: list[dict[str, Any]]) -> list[dict[str, Any]]:
+
+        res = []
+
+        previousYearWeekDate = []
+
+        index = 0
+        for reading in data:
+
+            weekDate = GazparSensor.__getIsoCalendar(reading["time_period"])
+
+            if (index < GazparSensor.MAX_WEEKLY_READINGS / 2):
+
+                weekDate = (weekDate.weekday, weekDate.week, weekDate.year - 1)
+
+                previousYearWeekDate.append(weekDate)
+
+                res.append(reading)
+            else:
+                if (previousYearWeekDate.count((weekDate.weekday, weekDate.week, weekDate.year)) > 0):
+                    res.append(reading)
+
+            index += 1
+
+        return res
+
+    # ----------------------------------
+    @staticmethod
+    def __selectMonthly(data: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        return data[:GazparSensor.MAX_MONTHLY_READINGS]
+
+    # ----------------------------------
+    @staticmethod
+    def __selectYearly(data: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        return data[:GazparSensor.MAX_YEARLY_READINGS]
+
+    # ----------------------------------
+    @staticmethod
+    def __getIsoCalendar(weekly_time_period):
+
+        date = datetime.strptime(weekly_time_period.split(" ")[1], GazparSensor.DATE_FORMAT)
+
+        return date.isocalendar()
