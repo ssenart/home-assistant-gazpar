@@ -42,7 +42,9 @@ sensor:
   scan_interval: '08:00:00'
 ```
 
-Ensure that tmpdir already exists before starting HA. It is used to store the downloaded files from GrDF.
+Do not use special characters in your password.
+
+Ensure that tmpdir already exists before starting HA. It is used to store the downloaded Excel files from GrDF.
 
 Restart your HA application. In HA development panel, you should see the new Gazpar entity 'sensor.gazpar' with its corresponding attributes:
 
