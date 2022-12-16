@@ -39,7 +39,7 @@ sensor:
   password: '***'
   pce_identifier: 'xxxxxxxxx'
   tmpdir: '/tmp'
-  scan_interval: '01:00:00'
+  scan_interval: '08:00:00'
 ```
 
 Ensure that tmpdir already exists before starting HA. It is used to store the downloaded files from GrDF.
@@ -119,19 +119,12 @@ You probably want to integrate GrDF data into the Home Assistant Energy module.
 
 ![Dashboard](images/energy_module.png)
 
-For that, I'm using the 2 steps configuration method:
+In Home Assistant energy configuration panel, you can set directly the sensor 'sensor.gazpar' in the gas consumption section.
 
-- Step 1 : Create a dedicated meter sensor using template:
+I prefer using an alias for all my sensor so I keep control on the sensor naming. For that, I define a template and use the template sensor.gas_energy to configure the dashboard.
 
 ```yaml
 - sensor:
-  - name: gas_volume
-    unit_of_measurement: 'm³'
-    state: >
-      {{ state_attr('sensor.gazpar', 'daily')[0]['start_index_m3'] + state_attr('sensor.gazpar', 'daily')[0]['volume_m3']}}
-    icon: mdi:fire
-    device_class: gas
-    state_class: total_increasing
   - name: gas_energy
     unit_of_measurement: 'kWh'      
     state: >
@@ -141,44 +134,3 @@ For that, I'm using the 2 steps configuration method:
     state_class: total_increasing
 ```
 
-- Step 2 : Setup utility_meter to get consumptions by period:
-
-```yaml
-utility_meter:
-  total_gas_volume:
-    source: sensor.gas_volume
-  daily_gas_volume:
-    source: sensor.gas_volume    
-    cycle: daily
-  weekly_gas_volume:
-    source: sensor.gas_volume    
-    cycle: weekly 
-  monthly_gas_volume:
-    source: sensor.gas_volume    
-    cycle: monthly
-  yearly_gas_volume:
-    source: sensor.gas_volume    
-    cycle: yearly
-  
-  total_gas_energy:
-    source: sensor.gas_energy
-  daily_gas_energy:
-    source: sensor.gas_energy    
-    cycle: daily
-  weekly_gas_energy:
-    source: sensor.gas_energy    
-    cycle: weekly 
-  monthly_gas_energy:
-    source: sensor.gas_energy    
-    cycle: monthly
-  yearly_gas_energy:
-    source: sensor.gas_energy    
-    cycle: yearly  
-```
-
-Then, in Home Assistant energy configuration panel,add the sensor 'sensor.total_gas_energy' in gas consumption section.
-Adding 'sensor.gas_energy' should be the same.
-
-Step 2 is optional. It only permits to monitor by yourself the consumption by period, without relying on the HA energy module.
-
-I would expect that adding volume sensor being available as well, but it is not for an unknown reason. I did not dig further since I prefer to monitor kWh rather than volume.

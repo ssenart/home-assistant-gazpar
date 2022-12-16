@@ -3,7 +3,7 @@ from homeassistant.const import CONF_USERNAME, ATTR_ATTRIBUTION, ATTR_UNIT_OF_ME
 from homeassistant.components.sensor import ATTR_STATE_CLASS, STATE_CLASS_TOTAL_INCREASING
 from typing import Any, Union
 
-from custom_components.gazpar.manifest import Manifest  
+from custom_components.gazpar.manifest import Manifest
 
 HA_ATTRIBUTION = "Data provided by GrDF"
 
