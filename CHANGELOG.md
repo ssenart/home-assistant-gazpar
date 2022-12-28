@@ -8,7 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-[#36](https://github.com/ssenart/home-assistant-gazpar/issues/36): [PyGazpar] Upgrade to version 1.2.1
+[#36](https://github.com/ssenart/home-assistant-gazpar/issues/36): [PyGazpar] Upgrade to version 1.2.1.
+
+### Added
+
+[#35](https://github.com/ssenart/home-assistant-gazpar/issues/35): [Feature] Renseigner plusieurs PCE.
 
 ## [1.3.4] - 2022-12-16
 

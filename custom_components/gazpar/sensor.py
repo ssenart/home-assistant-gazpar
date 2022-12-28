@@ -15,7 +15,7 @@ from custom_components.gazpar.util import Util
 import voluptuous as vol
 
 from homeassistant.components.sensor import PLATFORM_SCHEMA
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, CONF_SCAN_INTERVAL, ENERGY_KILO_WATT_HOUR
+from homeassistant.const import CONF_NAME, CONF_PASSWORD, CONF_USERNAME, CONF_SCAN_INTERVAL, ENERGY_KILO_WATT_HOUR
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.event import track_time_interval, call_later
@@ -31,13 +31,14 @@ DEFAULT_SCAN_INTERVAL = timedelta(hours=4)
 DEFAULT_WAITTIME = 30
 DEFAULT_DATASOURCE = "json"
 
-SENSOR_NAME = "Gazpar"
+DEFAULT_NAME = "gazpar"
 
 LAST_INDEX = -1
 
 ICON_GAS = "mdi:fire"
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
+    vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,  # type: ignore
     vol.Required(CONF_USERNAME): cv.string,
     vol.Required(CONF_PASSWORD): cv.string,
     vol.Required(CONF_PCE_IDENTIFIER): cv.string,
@@ -55,6 +56,9 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     _LOGGER.debug("Initializing Gazpar platform...")
 
     try:
+        name = config[CONF_NAME]
+        _LOGGER.debug(f"name={name}")
+
         username = config[CONF_USERNAME]
         _LOGGER.debug(f"username={username}")
 
@@ -76,7 +80,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
         scan_interval = config[CONF_SCAN_INTERVAL]
         _LOGGER.debug(f"scan_interval={scan_interval}")
 
-        account = GazparAccount(hass, username, password, pceIdentifier, wait_time, tmpdir, scan_interval, datasource)
+        account = GazparAccount(hass, name, username, password, pceIdentifier, wait_time, tmpdir, scan_interval, datasource)
         add_entities(account.sensors, True)
         _LOGGER.debug("Gazpar platform initialization has completed successfully")
     except BaseException:
@@ -89,8 +93,9 @@ class GazparAccount:
     """Representation of a Gazpar account."""
 
     # ----------------------------------
-    def __init__(self, hass, username: str, password: str, pceIdentifier: str, wait_time: int, tmpdir: str, scan_interval: timedelta, datasource: str):
+    def __init__(self, hass, name: str, username: str, password: str, pceIdentifier: str, wait_time: int, tmpdir: str, scan_interval: timedelta, datasource: str):
         """Initialise the Gazpar account."""
+        self._name = name
         self._username = username
         self._password = password
         self._pceIdentifier = pceIdentifier
@@ -103,7 +108,7 @@ class GazparAccount:
         self._errorMessages = []
 
         self.sensors.append(
-            GazparSensor(SENSOR_NAME, PropertyName.ENERGY.value, ENERGY_KILO_WATT_HOUR, self))
+            GazparSensor(name, PropertyName.ENERGY.value, ENERGY_KILO_WATT_HOUR, self))
 
         if hass is not None:
             call_later(hass, 5, self.update_gazpar_data)
