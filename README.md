@@ -147,7 +147,7 @@ You probably want to integrate GrDF data into the Home Assistant Energy module.
 
 In Home Assistant energy configuration panel, you can set directly the sensor 'sensor.gazpar' in the gas consumption section.
 
-I prefer using an alias for all my sensor so I keep control on the sensor naming. For that, I define a template and use the template sensor.gas_energy to configure the dashboard.
+I prefer using an alias for all my sensors so I keep control on the sensor naming. For that, I define a template and use the template sensor.gas_energy to configure the dashboard.
 
 ```yaml
 - sensor:
@@ -160,3 +160,16 @@ I prefer using an alias for all my sensor so I keep control on the sensor naming
     state_class: total_increasing
 ```
 
+For those who prefer to use the volume data instead of the energy (kWh) data, the following template can also be used:
+
+```yaml
+- sensor:
+  - name: gas_volume
+    unit_of_measurement: 'm³'
+    state: >
+      {{ state_attr('sensor.gazpar', 'daily')[0]['start_index_m3'] + state_attr('sensor.gazpar', 'daily')[0]['volume_
+m3']}}
+    icon: mdi:fire
+    device_class: gas
+    state_class: total_increasing
+```
