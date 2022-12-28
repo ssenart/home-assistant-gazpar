@@ -35,6 +35,7 @@ Add to your Home Assistant configuration.yaml:
 ```yaml
 sensor:
 - platform: 'gazpar'
+  name: 'gazpar'
   username: '***'
   password: '***'
   pce_identifier: 'xxxxxxxxx'
@@ -42,9 +43,32 @@ sensor:
   scan_interval: '08:00:00'
 ```
 
+'name' is the sensor name.
+
 Do not use special characters in your password.
 
 Ensure that tmpdir already exists before starting HA. It is used to store the downloaded Excel files from GrDF.
+
+If using multiple accounts, you can specify them with the following syntax:
+
+```yaml
+sensor:
+- platform: 'gazpar'
+  name: 'mygazpar'
+  username: '***'
+  password: '***'
+  pce_identifier: 'xxxxxxxxx'
+  tmpdir: '/tmp'
+  scan_interval: '08:00:00'
+
+- platform: 'gazpar'
+  name: 'othergazpar'
+  username: '***'
+  password: '***'
+  pce_identifier: 'xxxxxxxxx'
+  tmpdir: '/tmp'
+  scan_interval: '08:00:00'  
+```
 
 Restart your HA application. In HA development panel, you should see the new Gazpar entity 'sensor.gazpar' with its corresponding attributes:
 
