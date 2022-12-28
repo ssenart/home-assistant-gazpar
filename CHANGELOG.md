@@ -4,9 +4,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.5-alpha.0] - 2022-12-28
+
+### Changed
+
+[#36](https://github.com/ssenart/home-assistant-gazpar/issues/36): [PyGazpar] Upgrade to version 1.2.1
+
 ## [1.3.4] - 2022-12-16
 
 ### Changed
+
 [#31](https://github.com/ssenart/home-assistant-gazpar/issues/31): [Feature] For Weekly readings, provide data on the last 10 weeks VS the same weeks one year before.
 
 [#30](https://github.com/ssenart/home-assistant-gazpar/issues/30): Upgrade PyGazpar to version 1.2.0.
