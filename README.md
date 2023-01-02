@@ -43,7 +43,7 @@ sensor:
   scan_interval: '08:00:00'
 ```
 
-'name' is the sensor name.
+'name' is the sensor name (only available from version 1.3.5-alpha.1). Its default value is 'gazpar'.
 
 Do not use special characters in your password.
 
