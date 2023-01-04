@@ -142,7 +142,7 @@ class GazparAccount:
             _LOGGER.debug("New data have been retrieved successfully from PyGazpar library")
         except BaseException as exception:
             self._dataByFrequency = {}
-            errorMessage = f"Failed to query PyGazpar library. The exception has been raised: {0}"
+            errorMessage = "Failed to query PyGazpar library. The exception has been raised: {0}"
             self._errorMessages.append(errorMessage.format(str(exception)))
             _LOGGER.error(errorMessage.format(traceback.format_exc()))
             if event_time is None:

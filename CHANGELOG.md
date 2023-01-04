@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [#35](https://github.com/ssenart/home-assistant-gazpar/issues/35): [Feature] Renseigner plusieurs PCE.
 
+### Fixed
+
+[#39](https://github.com/ssenart/home-assistant-gazpar/issues/39): [Bug] Error message from PyGazpar is not displayed correctly in the log file.
+
 ## [1.3.4] - 2022-12-16
 
 ### Changed
