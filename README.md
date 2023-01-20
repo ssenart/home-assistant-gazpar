@@ -1,6 +1,6 @@
 # Home Assistant GrDF Gazpar
 
-## <span style="color: red"> !!! This integration is broken since CAPTCHA is mandatory on GrDF site !!!</span>
+## $\text{\color{red}{!!! \space This \space integration \space is \space broken \space since \space CAPTCHA \space is \space mandatory \space on \space GrDF \space site \space !!!}}$
 
 GrDF Gazpar integration permits to integrate in Home Assistant all your gas consumption data.
 
