@@ -15,7 +15,7 @@ from custom_components.gazpar.util import Util
 import voluptuous as vol
 
 from homeassistant.components.sensor import PLATFORM_SCHEMA
-from homeassistant.const import CONF_NAME, CONF_PASSWORD, CONF_USERNAME, CONF_SCAN_INTERVAL, ENERGY_KILO_WATT_HOUR
+from homeassistant.const import CONF_NAME, CONF_PASSWORD, CONF_USERNAME, CONF_SCAN_INTERVAL, UnitOfEnergy
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.event import track_time_interval, call_later
@@ -108,7 +108,7 @@ class GazparAccount:
         self._errorMessages = []
 
         self.sensors.append(
-            GazparSensor(name, PropertyName.ENERGY.value, ENERGY_KILO_WATT_HOUR, self))
+            GazparSensor(name, PropertyName.ENERGY.value, UnitOfEnergy.KILO_WATT_HOUR, self))
 
         if hass is not None:
             call_later(hass, 5, self.update_gazpar_data)
@@ -150,7 +150,7 @@ class GazparAccount:
 
         if event_time is not None:
             for sensor in self.sensors:
-                sensor.async_schedule_update_ha_state(True)
+                sensor.schedule_update_ha_state(True)
             _LOGGER.debug("HA notified that new data are available")
 
     # ----------------------------------

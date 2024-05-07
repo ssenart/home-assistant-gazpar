@@ -1,6 +1,6 @@
 from pygazpar.enum import PropertyName, Frequency
-from homeassistant.const import CONF_USERNAME, ATTR_ATTRIBUTION, ATTR_UNIT_OF_MEASUREMENT, ATTR_FRIENDLY_NAME, ATTR_ICON, ATTR_DEVICE_CLASS, ENERGY_KILO_WATT_HOUR, DEVICE_CLASS_ENERGY
-from homeassistant.components.sensor import ATTR_STATE_CLASS, STATE_CLASS_TOTAL_INCREASING
+from homeassistant.const import CONF_USERNAME, ATTR_ATTRIBUTION, ATTR_UNIT_OF_MEASUREMENT, ATTR_FRIENDLY_NAME, ATTR_ICON, ATTR_DEVICE_CLASS, UnitOfEnergy
+from homeassistant.components.sensor import ATTR_STATE_CLASS, SensorStateClass, SensorDeviceClass
 from typing import Any, Union
 
 from custom_components.gazpar.manifest import Manifest
@@ -57,11 +57,11 @@ class Util:
             ATTR_VERSION: Manifest.version(),
             CONF_USERNAME: username,
             ATTR_PCE: pceIdentifier,
-            ATTR_UNIT_OF_MEASUREMENT: ENERGY_KILO_WATT_HOUR,
+            ATTR_UNIT_OF_MEASUREMENT: UnitOfEnergy.KILO_WATT_HOUR,
             ATTR_FRIENDLY_NAME: SENSOR_FRIENDLY_NAME,
             ATTR_ICON: ICON_GAS,
-            ATTR_DEVICE_CLASS: DEVICE_CLASS_ENERGY,
-            ATTR_STATE_CLASS: STATE_CLASS_TOTAL_INCREASING,
+            ATTR_DEVICE_CLASS: SensorDeviceClass.ENERGY,
+            ATTR_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
             ATTR_ERROR_MESSAGES: errorMessages,
             str(Frequency.HOURLY): {},
             str(Frequency.DAILY): {},
