@@ -113,3 +113,17 @@ class TestGazparSensor:
         assert (state == 154405.404)
 
         TestGazparSensor.logger.info(f"state={state}")
+
+    # ----------------------------------
+    def test_toState_zero(self):
+
+        with open('tests/resources/zero_daily_data.json') as f:
+            data = {
+                Frequency.DAILY.value: json.load(f)
+            }
+
+        state = Util.toState(data)
+
+        assert (state == 154397.136)
+
+        TestGazparSensor.logger.info(f"state={state}")        

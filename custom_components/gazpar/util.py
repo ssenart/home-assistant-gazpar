@@ -41,6 +41,8 @@ class Util:
                     cumulativeEnergy += float(dailyData[currentIndex][PropertyName.ENERGY.value])
                     currentIndex += 1
 
+                currentIndex = min(currentIndex, len(dailyData) - 1)
+
                 volumeEndIndex = float(dailyData[currentIndex][PropertyName.END_INDEX.value])
                 converterFactor = float(dailyData[currentIndex][PropertyName.CONVERTER_FACTOR.value])
 

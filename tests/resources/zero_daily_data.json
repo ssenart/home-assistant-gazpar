@@ -1,0 +1,35 @@
+[
+    {
+        "time_period": "18/04/2021",
+        "start_index_m3": 13702.0,
+        "end_index_m3": 13702.0,
+        "volume_m3": 0.0,
+        "energy_kwh": 1.1,
+        "converter_factor_kwh/m3": 11.268,
+        "temperature_degC": 10.0,
+        "type": "MES",
+        "timestamp": "2021-04-20T10:21:46.265119"
+    },
+    {
+        "time_period": "17/04/2021",
+        "start_index_m3": 13702.0,
+        "end_index_m3": 13702.0,
+        "volume_m3": 7.7,
+        "energy_kwh": 1.2,
+        "converter_factor_kwh/m3": 11.268,
+        "temperature_degC": 9.0,
+        "type": "MES",
+        "timestamp": "2021-04-20T10:21:46.265119"
+    },
+    {
+        "time_period": "16/04/2021",
+        "start_index_m3": 13702.0,
+        "end_index_m3": 13702.0,
+        "volume_m3": 9.9,
+        "energy_kwh": 0.7,
+        "converter_factor_kwh/m3": 11.268,
+        "temperature_degC": 8.0,
+        "type": "MES",
+        "timestamp": "2021-04-20T10:21:46.265119"
+    }
+]
