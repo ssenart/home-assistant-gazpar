@@ -3,6 +3,7 @@ from datetime import timedelta
 import json
 import logging
 import traceback
+import asyncio
 from datetime import datetime
 
 from pygazpar.client import Client
@@ -11,6 +12,7 @@ from pygazpar.enum import PropertyName, Frequency
 from typing import Any
 
 from custom_components.gazpar.util import Util
+from custom_components.gazpar.manifest import Manifest
 
 import voluptuous as vol
 
@@ -18,7 +20,7 @@ from homeassistant.components.sensor import PLATFORM_SCHEMA
 from homeassistant.const import CONF_NAME, CONF_PASSWORD, CONF_USERNAME, CONF_SCAN_INTERVAL, UnitOfEnergy
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.event import track_time_interval, call_later
+from homeassistant.helpers.event import async_call_later, async_track_time_interval
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -50,7 +52,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
 
 
 # --------------------------------------------------------------------------------------------
-def setup_platform(hass, config, add_entities, discovery_info=None):
+async def async_setup_platform(hass, config, add_entities, discovery_info=None):
     """Configure the platform and add the Gazpar sensor."""
 
     _LOGGER.debug("Initializing Gazpar platform...")
@@ -80,8 +82,18 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
         scan_interval = config[CONF_SCAN_INTERVAL]
         _LOGGER.debug(f"scan_interval={scan_interval}")
 
-        account = GazparAccount(hass, name, username, password, pceIdentifier, wait_time, tmpdir, scan_interval, datasource)
+        version = await Manifest.version()
+        _LOGGER.debug(f"version={version}")
+
+        account = GazparAccount(hass, name, username, password, pceIdentifier, version, wait_time, tmpdir, scan_interval, datasource)
         add_entities(account.sensors, True)
+
+        if hass is not None:
+            async_call_later(hass, 5, account.async_update_gazpar_data)
+            async_track_time_interval(hass, account.async_update_gazpar_data, account._scan_interval)
+        else:
+            await account.async_update_gazpar_data(None)
+
         _LOGGER.debug("Gazpar platform initialization has completed successfully")
     except BaseException:
         _LOGGER.error("Gazpar platform initialization has failed with exception : %s", traceback.format_exc())
@@ -93,12 +105,13 @@ class GazparAccount:
     """Representation of a Gazpar account."""
 
     # ----------------------------------
-    def __init__(self, hass, name: str, username: str, password: str, pceIdentifier: str, wait_time: int, tmpdir: str, scan_interval: timedelta, datasource: str):
+    def __init__(self, hass, name: str, username: str, password: str, pceIdentifier: str, version: str, wait_time: int, tmpdir: str, scan_interval: timedelta, datasource: str):
         """Initialise the Gazpar account."""
         self._name = name
         self._username = username
         self._password = password
         self._pceIdentifier = pceIdentifier
+        self._version = version
         self._wait_time = wait_time
         self._tmpdir = tmpdir
         self._scan_interval = scan_interval
@@ -110,14 +123,8 @@ class GazparAccount:
         self.sensors.append(
             GazparSensor(name, PropertyName.ENERGY.value, UnitOfEnergy.KILO_WATT_HOUR, self))
 
-        if hass is not None:
-            call_later(hass, 5, self.update_gazpar_data)
-            track_time_interval(hass, self.update_gazpar_data, self._scan_interval)
-        else:
-            self.update_gazpar_data(None)
-
     # ----------------------------------
-    def update_gazpar_data(self, event_time):
+    async def async_update_gazpar_data(self, event_time):
         """Fetch new state data for the sensor."""
 
         _LOGGER.debug("Querying PyGazpar library for new data...")
@@ -135,7 +142,8 @@ class GazparAccount:
             else:
                 raise Exception(f"Invalid datasource value: '{self._datasource}' (valid values are: json | excel | test)")
 
-            self._dataByFrequency = client.loadSince(self._pceIdentifier, 1095)
+            loop = asyncio.get_event_loop()
+            self._dataByFrequency = await loop.run_in_executor(None, client.loadSince, self._pceIdentifier, 1095)
 
             _LOGGER.debug(f"data={json.dumps(self._dataByFrequency, indent=2)}")
 
@@ -164,6 +172,12 @@ class GazparAccount:
     def pceIdentifier(self):
         """Return the PCE identifier."""
         return self._pceIdentifier
+
+    # ----------------------------------
+    @property
+    def version(self):
+        """Return the version."""
+        return self._version
 
     # ----------------------------------
     @property
@@ -233,7 +247,7 @@ class GazparSensor(Entity):
     def extra_state_attributes(self):
         """Return the state attributes of the sensor."""
 
-        return Util.toAttributes(self._account.username, self._account.pceIdentifier, self._dataByFrequency, self._account.errorMessages)
+        return Util.toAttributes(self._account.username, self._account.pceIdentifier, self._account.version, self._dataByFrequency, self._account.errorMessages)
 
     # ----------------------------------
     def update(self):

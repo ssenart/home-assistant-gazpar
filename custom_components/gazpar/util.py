@@ -1,9 +1,7 @@
 from pygazpar.enum import PropertyName, Frequency
 from homeassistant.const import CONF_USERNAME, ATTR_ATTRIBUTION, ATTR_UNIT_OF_MEASUREMENT, ATTR_FRIENDLY_NAME, ATTR_ICON, ATTR_DEVICE_CLASS, UnitOfEnergy
-from homeassistant.components.sensor import ATTR_STATE_CLASS, SensorStateClass, SensorDeviceClass
+from homeassistant.components.sensor.const import ATTR_STATE_CLASS, SensorStateClass, SensorDeviceClass
 from typing import Any, Union
-
-from custom_components.gazpar.manifest import Manifest
 
 HA_ATTRIBUTION = "Data provided by GrDF"
 
@@ -52,11 +50,11 @@ class Util:
 
     # ----------------------------------
     @staticmethod
-    def toAttributes(username: str, pceIdentifier: str, pygazparData: dict[str, list[dict[str, Any]]], errorMessages: list[str]) -> dict[str, Any]:
+    def toAttributes(username: str, pceIdentifier: str, version: str, pygazparData: dict[str, list[dict[str, Any]]], errorMessages: list[str]) -> dict[str, Any]:
 
         res = {
             ATTR_ATTRIBUTION: HA_ATTRIBUTION,
-            ATTR_VERSION: Manifest.version(),
+            ATTR_VERSION: version,
             CONF_USERNAME: username,
             ATTR_PCE: pceIdentifier,
             ATTR_UNIT_OF_MEASUREMENT: UnitOfEnergy.KILO_WATT_HOUR,
