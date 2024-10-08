@@ -1,5 +1,5 @@
 from custom_components.gazpar.sensor import CONF_PCE_IDENTIFIER, CONF_DATASOURCE, async_setup_platform
-from custom_components.gazpar.sensor import CONF_NAME, CONF_USERNAME, CONF_PASSWORD, CONF_WAITTIME, CONF_TMPDIR, CONF_SCAN_INTERVAL
+from custom_components.gazpar.sensor import CONF_NAME, CONF_USERNAME, CONF_PASSWORD, CONF_WAITTIME, CONF_TMPDIR, CONF_SCAN_INTERVAL, CONF_LAST_N_DAYS
 from custom_components.gazpar.util import Util
 from pygazpar.enum import Frequency
 import os
@@ -31,6 +31,7 @@ async def test_live():
         CONF_WAITTIME: 30,
         CONF_TMPDIR: "./tmp",
         CONF_SCAN_INTERVAL: 600,
+        CONF_LAST_N_DAYS: 30,
         CONF_DATASOURCE: "json"
     }
 
@@ -57,6 +58,7 @@ async def test_sample():
         CONF_WAITTIME: 30,
         CONF_TMPDIR: "./tmp",
         CONF_SCAN_INTERVAL: 600,
+        CONF_LAST_N_DAYS: 30,
         CONF_DATASOURCE: "test"
     }
 
@@ -83,6 +85,7 @@ async def test_toAttribute():
         CONF_WAITTIME: 30,
         CONF_TMPDIR: "./tmp",
         CONF_SCAN_INTERVAL: 600,
+        CONF_LAST_N_DAYS: 30,
         CONF_DATASOURCE: "test",
     }
 
