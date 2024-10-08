@@ -27,10 +27,12 @@ _LOGGER = logging.getLogger(__name__)
 CONF_PCE_IDENTIFIER = "pce_identifier"
 CONF_WAITTIME = "wait_time"
 CONF_TMPDIR = "tmpdir"
+CONF_LAST_N_DAYS = "lastNDays"
 CONF_DATASOURCE = "datasource"
 
 DEFAULT_SCAN_INTERVAL = timedelta(hours=4)
 DEFAULT_WAITTIME = 30
+DEFAULT_LAST_N_DAYS = 1095
 DEFAULT_DATASOURCE = "json"
 
 DEFAULT_NAME = "gazpar"
@@ -47,7 +49,8 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Optional(CONF_WAITTIME, default=DEFAULT_WAITTIME): int,  # type: ignore
     vol.Required(CONF_TMPDIR): cv.string,
     vol.Optional(CONF_DATASOURCE, default=DEFAULT_DATASOURCE): cv.string,  # type: ignore
-    vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): cv.time_period  # type: ignore
+    vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): cv.time_period,  # type: ignore
+    vol.Optional(CONF_LAST_N_DAYS, default=DEFAULT_LAST_N_DAYS): int  # type: ignore
 })
 
 
@@ -82,10 +85,13 @@ async def async_setup_platform(hass, config, add_entities, discovery_info=None):
         scan_interval = config[CONF_SCAN_INTERVAL]
         _LOGGER.debug(f"scan_interval={scan_interval}")
 
+        lastNDays = config[CONF_LAST_N_DAYS]
+        _LOGGER.debug(f"lastNDays={lastNDays}")
+
         version = await Manifest.version()
         _LOGGER.debug(f"version={version}")
 
-        account = GazparAccount(hass, name, username, password, pceIdentifier, version, wait_time, tmpdir, scan_interval, datasource)
+        account = GazparAccount(hass, name, username, password, pceIdentifier, wait_time, tmpdir, scan_interval, lastNDays, version, datasource)
         add_entities(account.sensors, True)
 
         if hass is not None:
@@ -105,16 +111,17 @@ class GazparAccount:
     """Representation of a Gazpar account."""
 
     # ----------------------------------
-    def __init__(self, hass, name: str, username: str, password: str, pceIdentifier: str, version: str, wait_time: int, tmpdir: str, scan_interval: timedelta, datasource: str):
+    def __init__(self, hass, name: str, username: str, password: str, pceIdentifier: str, wait_time: int, tmpdir: str, scan_interval: timedelta, lastNDays: int, version: str, datasource: str):
         """Initialise the Gazpar account."""
         self._name = name
         self._username = username
         self._password = password
         self._pceIdentifier = pceIdentifier
-        self._version = version
         self._wait_time = wait_time
         self._tmpdir = tmpdir
         self._scan_interval = scan_interval
+        self._lastNDays = lastNDays
+        self._version = version
         self._datasource = datasource
         self._dataByFrequency = {}
         self.sensors = []
@@ -143,7 +150,7 @@ class GazparAccount:
                 raise Exception(f"Invalid datasource value: '{self._datasource}' (valid values are: json | excel | test)")
 
             loop = asyncio.get_event_loop()
-            self._dataByFrequency = await loop.run_in_executor(None, client.loadSince, self._pceIdentifier, 1095)
+            self._dataByFrequency = await loop.run_in_executor(None, client.loadSince, self._pceIdentifier, self._lastNDays)
 
             _LOGGER.debug(f"data={json.dumps(self._dataByFrequency, indent=2)}")
 

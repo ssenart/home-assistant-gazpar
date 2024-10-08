@@ -43,9 +43,18 @@ sensor:
   pce_identifier: 'xxxxxxxxx'
   tmpdir: '/tmp'
   scan_interval: '08:00:00'
+  lastNDays: 365
 ```
 
 'name' is the sensor name (only available from version 1.3.5-alpha.1). Its default value is 'gazpar'.
+
+'lastNDays' is the number of days of data to download from GrDF (only available from version 1.3.9). Its default value is 1095 (3 years).
+
+If you have the error: 
+```
+An error occurred while loading data. Status code: 500 - {"code":500,"message":"Internal Server Error"}
+```
+...it is likely you try to get more data than available. Please reduce the lastNDays parameter accordingly (see issue [#62](https://github.com/ssenart/home-assistant-gazpar/issues/62)).
 
 Do not use special characters in your password.
 
