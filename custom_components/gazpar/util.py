@@ -35,14 +35,31 @@ class Util:
 
                 # For low consumption, we also use the energy column in addition to the volume index columns
                 # and compute more accurately the consumed energy.
-                while (currentIndex < len(dailyData)) and (float(dailyData[currentIndex][PropertyName.START_INDEX.value]) == float(dailyData[currentIndex][PropertyName.END_INDEX.value])):
-                    cumulativeEnergy += float(dailyData[currentIndex][PropertyName.ENERGY.value])
+                startIndex = dailyData[currentIndex][PropertyName.START_INDEX.value]
+                endIndex = dailyData[currentIndex][PropertyName.END_INDEX.value]
+
+                while (startIndex is not None) and (endIndex is not None) and (currentIndex < len(dailyData)) and (float(startIndex) == float(endIndex)):
+                    energy = dailyData[currentIndex][PropertyName.ENERGY.value]
+                    if energy is not None:
+                        cumulativeEnergy += float(energy)
                     currentIndex += 1
+                    startIndex = dailyData[currentIndex][PropertyName.START_INDEX.value]
+                    endIndex = dailyData[currentIndex][PropertyName.END_INDEX.value]                    
 
                 currentIndex = min(currentIndex, len(dailyData) - 1)
 
-                volumeEndIndex = float(dailyData[currentIndex][PropertyName.END_INDEX.value])
-                converterFactor = float(dailyData[currentIndex][PropertyName.CONVERTER_FACTOR.value])
+                endIndex = dailyData[currentIndex][PropertyName.END_INDEX.value]
+                converterFactorStr = dailyData[currentIndex][PropertyName.CONVERTER_FACTOR.value]
+
+                if endIndex is not None:
+                    volumeEndIndex = float(endIndex)
+                else:
+                    raise ValueError("End index is missing in the daily data.")
+
+                if converterFactorStr is not None:
+                    converterFactor = float(converterFactorStr)
+                else:
+                    raise ValueError("Converter factor is missing in the daily data.")
 
                 res = volumeEndIndex * converterFactor + cumulativeEnergy
 
