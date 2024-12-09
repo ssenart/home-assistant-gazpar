@@ -7,7 +7,7 @@
   "dependencies": [],
   "documentation": "https://github.com/ssenart/home-assistant-gazpar",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/ssenart/ha-custom_components/issues",
+  "issue_tracker": "https://github.com/ssenart/home-assistant-gazpar/issues",
   "requirements": [
     "pygazpar>=1.2.4"
   ],
