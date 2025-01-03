@@ -8,6 +8,16 @@ From version 1.2.0, it is compatible with [Lovelace Garpar Card](https://github.
 
 GrDF Gazpar custom component is using [PyGazpar](https://github.com/ssenart/PyGazpar) library to retrieve GrDF data.
 
+## Alternative integration using MQTT
+
+home-assistant-gazpar integration is using Home Assistant API and may be broken from a HA release to another.
+
+An good alternative is using MQTT integration with the [Gazpar2MQTT](https://github.com/ssenart/gazpar2mqtt) application.
+
+[Gazpar2MQTT](https://github.com/ssenart/gazpar2mqtt) has been developed recently for a better loose coupling with HA.
+
+[Gazpar2MQTT](https://github.com/ssenart/gazpar2mqtt) is also compatible with [Lovelace Garpar Card](https://github.com/ssenart/lovelace-gazpar-card).
+
 ## Installation
 
 ### Method 1 : HACS (recommended)
