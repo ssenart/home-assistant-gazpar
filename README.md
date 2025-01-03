@@ -1,7 +1,5 @@
 # Home Assistant GrDF Gazpar
 
-## $\text{\color{green}{!!! This library is working again. CAPTCHA has been removed !!!}}$
-
 GrDF Gazpar integration permits to integrate in Home Assistant all your gas consumption data.
 
 From version 1.2.0, it is compatible with [Lovelace Garpar Card](https://github.com/ssenart/lovelace-gazpar-card).
@@ -151,6 +149,16 @@ yearly:
 ```
 
 ## Home Assistant Energy module integration
+
+### Gazpar2HAWS
+
+A new application [Gazpar2HAWS](https://github.com/ssenart/gazpar2haws) has been developed to feed the Home Assistant Energy dashboard.
+
+It is able to rebuild the full data history and keep it updated.
+
+The dates are now in sync with Home Assistant.
+
+### Legacy method
 
 You probably want to integrate GrDF data into the Home Assistant Energy module.
 
