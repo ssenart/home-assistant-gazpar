@@ -166,9 +166,9 @@ class GazparAccount:
             elif self._datasource == "excel":
                 client = Client(ExcelWebDataSource(self._username, self._password, self._tmpdir))
             else:
-                raise Exception(
+                raise Exception(  # pylint: disable=broad-exception-raised
                     f"Invalid datasource value: '{self._datasource}' (valid values are: json | excel | test)"
-                )  # pylint: disable=broad-exception-raised
+                )
 
             loop = asyncio.get_event_loop()
             self._dataByFrequency = await loop.run_in_executor(
