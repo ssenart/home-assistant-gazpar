@@ -61,8 +61,9 @@ class Util:
                     if energy is not None:
                         cumulativeEnergy += float(energy)
                     currentIndex += 1
-                    startIndex = dailyData[currentIndex][PropertyName.START_INDEX.value]
-                    endIndex = dailyData[currentIndex][PropertyName.END_INDEX.value]
+                    if currentIndex < len(dailyData):
+                        startIndex = dailyData[currentIndex][PropertyName.START_INDEX.value]
+                        endIndex = dailyData[currentIndex][PropertyName.END_INDEX.value]
 
                 currentIndex = min(currentIndex, len(dailyData) - 1)
 

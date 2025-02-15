@@ -27,7 +27,7 @@ global_entities: list[GazparSensor] = []
 
 
 # ----------------------------------
-def add_entities(entities: list):
+def add_entities(entities: list, flag: bool):  # pylint: disable=unused-argument
     global_entities.extend(entities)
 
 
