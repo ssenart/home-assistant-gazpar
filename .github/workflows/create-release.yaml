@@ -1,0 +1,121 @@
+name: Create Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      package-version:
+        description: "Package version"
+        required: false
+        default: ""
+        type: string
+        
+permissions:
+  contents: write # Allow to commit and push.
+
+env:
+  DEFAULT_PYTHON_VERSION: "3.13"
+
+jobs:
+  #----------------------------------------------
+  # Prepare
+  prepare:
+    name: Prepare
+    outputs:
+      package-version: ${{ steps.select-package-version.outputs.package-version }}
+      default_python_version: ${{ env.DEFAULT_PYTHON_VERSION }}
+    runs-on: ubuntu-latest
+    steps:
+      #----------------------------------------------
+      # Display Github environment variables
+      - name: Display Github environment variables
+        run: printenv | grep '^GITHUB_' | sort
+
+      #----------------------------------------------
+      # Check-out repo
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      #----------------------------------------------
+      # Compute the version of the project based in the current checkout branch
+      - name: Compute version
+        id: compute-version
+        uses: ./.github/workflows/compute-version
+        if: ${{ inputs.package-version == '' }}
+
+      #----------------------------------------------
+      # Select package version
+      - name: Select package version
+        id: select-package-version
+        run: |
+          if [ -z "${{ inputs.package-version }}" ]; then
+            echo "package-version=${{ steps.compute-version.outputs.pep440-version }}" >> $GITHUB_OUTPUT
+          else
+            echo "package-version=${{ inputs.package-version }}" >> $GITHUB_OUTPUT
+          fi
+
+      #----------------------------------------------
+      # Display versions
+      - name: Display versions
+        run: |
+          echo "package-version=${{ steps.select-package-version.outputs.package-version }}"
+          echo "default-python-version=${{ env.DEFAULT_PYTHON_VERSION }}"
+
+  #----------------------------------------------
+  # Build and publish the pip package and docker image
+  build:
+    name: Build
+    needs: prepare
+    runs-on: "ubuntu-latest"
+    steps:
+      #----------------------------------------------
+      # Checkout repo
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-tags: true
+
+      #----------------------------------------------
+      # Install & configure poetry  -----
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          virtualenvs-path: .venv
+
+      #----------------------------------------------
+      - name: Bump version to ${{ needs.prepare.outputs.package-version }}
+        run: |
+          poetry version ${{ needs.prepare.outputs.package-version }}
+          contents="$(jq '.version = "${{ needs.prepare.outputs.package-version }}"' ./custom_components/gazpar/manifest.json)" && echo -E "${contents}" > ./custom_components/gazpar/manifest.json
+
+      #----------------------------------------------
+      # Commit the changes
+      - name: Commit changes
+        if: true
+        run: |
+          git config --global user.name github-actions
+          git config --global user.email github-actions@github.com
+          git add pyproject.toml
+          git commit --allow-empty -m "Bump version to ${{ needs.prepare.outputs.package-version }}"
+          git push
+
+      #----------------------------------------------
+      # Tag the commit
+      - name: Git tag
+        if: true
+        uses: ./.github/workflows/git-tag
+        with:
+          tag-name: ${{ needs.prepare.outputs.package-version }}
+
+      #----------------------------------------------
+      #  Set-up python
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
+
+      #----------------------------------------------
+      - name: Build package
+        run: poetry build       

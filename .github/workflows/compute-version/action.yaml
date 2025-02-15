@@ -1,0 +1,79 @@
+name: 'compute-version'
+description: 'Compute the version of the project based in the current checkout branch'
+
+outputs:
+  pep440-version:
+    description: 'The computed PEP440 version of the project'
+    value: ${{ steps.set-version.outputs.pep440-version }}
+
+runs:
+  using: "composite"
+  steps:
+    #----------------------------------------------
+    # GitVersion setup : see examples at https://github.com/GitTools/actions/blob/main/docs/examples/github/gitversion/setup.md
+    - name: Install GitVersion
+      uses: gittools/actions/gitversion/setup@v3.1.1
+      with:
+        versionSpec: '6.0.x'
+
+    #----------------------------------------------
+    # GitVersion execution : see examples at https://github.com/GitTools/actions/blob/main/docs/examples/github/gitversion/execute/usage-examples.md
+    - name: Determine Version
+      id:   gitversion
+      uses: gittools/actions/gitversion/execute@v3.1.1
+      with:
+        useConfigFile: true
+        configFilePath: gitversion.yaml
+
+    #----------------------------------------------
+    # Display GitVersion outputs
+    - name: Display GitVersion outputs
+      shell: bash
+      run: |
+        echo "Major: ${{ steps.gitversion.outputs.major }}"
+        echo "Minor: ${{ steps.gitversion.outputs.minor }}"
+        echo "Patch: ${{ steps.gitversion.outputs.patch }}"
+        echo "PreReleaseTag: ${{ steps.gitversion.outputs.preReleaseTag }}"
+        echo "PreReleaseTagWithDash: ${{ steps.gitversion.outputs.preReleaseTagWithDash }}"
+        echo "PreReleaseLabel: ${{ steps.gitversion.outputs.preReleaseLabel }}"
+        echo "PreReleaseNumber: ${{ steps.gitversion.outputs.preReleaseNumber }}"
+        echo "WeightedPreReleaseNumber: ${{ steps.gitversion.outputs.weightedPreReleaseNumber }}"
+        echo "BuildMetaData: ${{ steps.gitversion.outputs.buildMetaData }}"
+        echo "BuildMetaDataPadded: ${{ steps.gitversion.outputs.buildMetaDataPadded }}"
+        echo "FullBuildMetaData: ${{ steps.gitversion.outputs.fullBuildMetaData }}"
+        echo "MajorMinorPatch: ${{ steps.gitversion.outputs.majorMinorPatch }}"
+        echo "SemVer: ${{ steps.gitversion.outputs.semVer }}"
+        echo "LegacySemVer: ${{ steps.gitversion.outputs.legacySemVer }}"
+        echo "LegacySemVerPadded: ${{ steps.gitversion.outputs.legacySemVerPadded }}"
+        echo "AssemblySemVer: ${{ steps.gitversion.outputs.assemblySemVer }}"
+        echo "AssemblySemFileVer: ${{ steps.gitversion.outputs.assemblySemFileVer }}"
+        echo "FullSemVer: ${{ steps.gitversion.outputs.fullSemVer }}"
+        echo "InformationalVersion: ${{ steps.gitversion.outputs.informationalVersion }}"
+        echo "BranchName: ${{ steps.gitversion.outputs.branchName }}"
+        echo "EscapedBranchName: ${{ steps.gitversion.outputs.escapedBranchName }}"
+        echo "Sha: ${{ steps.gitversion.outputs.sha }}"
+        echo "ShortSha: ${{ steps.gitversion.outputs.shortSha }}"
+        echo "NuGetVersionV2: ${{ steps.gitversion.outputs.nuGetVersionV2 }}"
+        echo "NuGetVersion: ${{ steps.gitversion.outputs.nuGetVersion }}"
+        echo "NuGetPreReleaseTagV2: ${{ steps.gitversion.outputs.nuGetPreReleaseTagV2 }}"
+        echo "NuGetPreReleaseTag: ${{ steps.gitversion.outputs.nuGetPreReleaseTag }}"
+        echo "VersionSourceSha: ${{ steps.gitversion.outputs.versionSourceSha }}"
+        echo "CommitsSinceVersionSource: ${{ steps.gitversion.outputs.commitsSinceVersionSource }}"
+        echo "CommitsSinceVersionSourcePadded: ${{ steps.gitversion.outputs.commitsSinceVersionSourcePadded }}"
+        echo "UncommittedChanges: ${{ steps.gitversion.outputs.uncommittedChanges }}"
+        echo "CommitDate: ${{ steps.gitversion.outputs.commitDate }}"              
+
+    #----------------------------------------------
+    # Set the version in the output
+    - name: Set version in the output
+      id:   set-version
+      shell: bash      
+      run: |
+        echo "pep440-version=${{ steps.gitversion.outputs.informationalVersion }}" >> $GITHUB_OUTPUT
+
+    #----------------------------------------------
+    # Display the version
+    - name: Display the versions
+      shell: bash
+      run: |
+        echo "pep440-version=${{ steps.set-version.outputs.pep440-version }}"

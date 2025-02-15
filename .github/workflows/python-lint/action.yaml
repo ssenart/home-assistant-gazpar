@@ -1,0 +1,69 @@
+name: 'python-lint'
+description: 'Python linting workflow'
+
+inputs:
+  python-version:
+    description: 'Python version'
+    required: true
+    default: '3.13'
+
+runs:
+  using: "composite"
+  steps:
+    #----------------------------------------------
+    #  Set-up python
+    - uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}    
+
+    #----------------------------------------------
+    # Install poetry
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+        virtualenvs-path: .venv
+
+    #----------------------------------------------
+    # Install project
+    #----------------------------------------------
+    - name: Install project
+      shell: bash
+      run: poetry install --no-interaction
+
+    #----------------------------------------------
+    #  Run Pylint    
+    - name: Pylint
+      shell: bash
+      run: poetry run pylint .
+
+    #----------------------------------------------
+    #  Run Flake8
+    - name: Flake8
+      shell: bash
+      run: poetry run flake8 .
+
+    #----------------------------------------------
+    #  Run Black
+    - name: Black
+      shell: bash
+      run: poetry run black . --check
+
+    #----------------------------------------------
+    #  Run Isort
+    - name: Isort
+      shell: bash
+      run: poetry run isort . --check-only
+
+    #----------------------------------------------
+    #  Run Mypy
+    - name: Mypy
+      shell: bash
+      run: poetry run mypy . --install-types --non-interactive
+
+    #----------------------------------------------
+    #  Run Ruff
+    - name: Ruff
+      shell: bash
+      run: poetry run ruff check .

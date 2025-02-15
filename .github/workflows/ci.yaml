@@ -1,0 +1,115 @@
+name: CI
+run-name: "${{ github.event_name == 'workflow_dispatch' && format('CI: {0}', github.ref_name) || '' }}"
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - release/*
+      - feature/*
+  pull_request: ~
+  workflow_dispatch:
+    inputs:
+      skip-lint:
+        description: "Skip linting"
+        required: false
+        default: false
+        type: boolean
+      skip-tests:
+        description: "Skip tests"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read # Read-only access
+
+env:
+  DEFAULT_PYTHON_VERSION: "3.13"
+  TARGET_PYTHON_VERSIONS: "[ '3.10', '3.11', '3.12', '3.13' ]"
+
+jobs:
+  #----------------------------------------------
+  # Collect information
+  prepare:
+    name: Prepare
+    outputs:
+      package-version: ${{ steps.compute-version.outputs.pep440-version }}
+      target_python_versions: ${{ env.TARGET_PYTHON_VERSIONS }}
+      default_python_version: ${{ env.DEFAULT_PYTHON_VERSION }}
+    runs-on: ubuntu-latest
+    steps:
+      #----------------------------------------------
+      # Display Github environment variables
+      - name: Display Github environment variables
+        run: printenv | grep '^GITHUB_' | sort
+
+      #----------------------------------------------
+      # Check-out repo
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      #----------------------------------------------
+      # Compute the version of the project based in the current checkout branch
+      - name: Compute version
+        id: compute-version
+        uses: ./.github/workflows/compute-version
+
+      #----------------------------------------------
+      # Send to Github Actions
+      - name: Display information
+        run: |
+          echo "package-version=${{ steps.compute-version.outputs.pep440-version }}"
+          echo "target-python-versions=${{ env.TARGET_PYTHON_VERSIONS }}"
+          echo "default-python-version=${{ env.DEFAULT_PYTHON_VERSION }}"
+
+  #----------------------------------------------
+  # Lint
+  lint:
+    name: Lint
+    needs: prepare
+    runs-on: ubuntu-latest
+    if: ${{ !github.event.inputs.skip-lint }}
+    steps:
+      #----------------------------------------------
+      #  Check-out repo
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      #----------------------------------------------
+      # Linting the code
+      - name: Lint
+        uses: ./.github/workflows/python-lint
+        with:
+          python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
+
+  #----------------------------------------------
+  # Test
+  test:
+    name: Test
+    needs: [prepare, lint]
+    runs-on: "ubuntu-latest"
+    if: ${{ !github.event.inputs.skip-tests }}
+    strategy:
+      fail-fast: true
+      matrix:
+        python-version: ${{ fromJSON(needs.prepare.outputs.target_python_versions) }}
+    steps:
+      #----------------------------------------------
+      #  Check-out repo
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      #----------------------------------------------
+      # Testing the code
+      - name: Test
+        uses: ./.github/workflows/python-test
+        with:
+          python-version: ${{ matrix.python-version }}
+        env:
+          GRDF_USERNAME: ${{ secrets.GRDF_USERNAME }}
+          GRDF_PASSWORD: ${{ secrets.GRDF_PASSWORD }}
+          PCE_IDENTIFIER: ${{ secrets.PCE_IDENTIFIER }}               
