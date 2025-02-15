@@ -30,7 +30,7 @@ runs:
     #----------------------------------------------
     - name: Install project
       shell: bash
-      run: poetry install --no-interaction
+      run: poetry install --no-interaction --no-root
 
     #----------------------------------------------
     #  Run Pylint    
