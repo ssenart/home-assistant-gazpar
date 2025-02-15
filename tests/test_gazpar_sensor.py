@@ -1,22 +1,34 @@
-from custom_components.gazpar.sensor import CONF_PCE_IDENTIFIER, CONF_DATASOURCE, async_setup_platform
-from custom_components.gazpar.sensor import CONF_NAME, CONF_USERNAME, CONF_PASSWORD, CONF_WAITTIME, CONF_TMPDIR, CONF_SCAN_INTERVAL, CONF_LAST_N_DAYS
-from custom_components.gazpar.util import Util
-from pygazpar.enum import Frequency
-import os
-import logging
 import json
-import pytest
+import logging
+import os
 
+import pytest
+from pygazpar.enum import Frequency
+
+from custom_components.gazpar.sensor import (
+    CONF_DATASOURCE,
+    CONF_LAST_N_DAYS,
+    CONF_NAME,
+    CONF_PASSWORD,
+    CONF_PCE_IDENTIFIER,
+    CONF_SCAN_INTERVAL,
+    CONF_TMPDIR,
+    CONF_USERNAME,
+    CONF_WAITTIME,
+    GazparSensor,
+    async_setup_platform,
+)
+from custom_components.gazpar.util import Util
 
 # --------------------------------------------------------------------------------------------
 logger = logging.getLogger(__name__)
 
-entities = []
+global_entities: list[GazparSensor] = []
 
 
 # ----------------------------------
-def add_entities(entities: list, flag: bool):
-    entities.extend(entities)
+def add_entities(entities: list):
+    global_entities.extend(entities)
 
 
 # ----------------------------------
@@ -32,12 +44,12 @@ async def test_live():
         CONF_TMPDIR: "./tmp",
         CONF_SCAN_INTERVAL: 600,
         CONF_LAST_N_DAYS: 30,
-        CONF_DATASOURCE: "json"
+        CONF_DATASOURCE: "json",
     }
 
     await async_setup_platform(None, config, add_entities)
 
-    for entity in entities:
+    for entity in global_entities:
         entity.update()
         state = entity.state
         attributes = entity.extra_state_attributes
@@ -59,12 +71,12 @@ async def test_sample():
         CONF_TMPDIR: "./tmp",
         CONF_SCAN_INTERVAL: 600,
         CONF_LAST_N_DAYS: 30,
-        CONF_DATASOURCE: "test"
+        CONF_DATASOURCE: "test",
     }
 
     await async_setup_platform(None, config, add_entities)
 
-    for entity in entities:
+    for entity in global_entities:
         entity.update()
         state = entity.state
         attributes = entity.extra_state_attributes
@@ -91,10 +103,12 @@ async def test_toAttribute():
 
     await async_setup_platform(None, config, add_entities)
 
-    for entity in entities:
+    for entity in global_entities:
         entity.update()
 
-        attributes = Util.toAttributes(config[CONF_USERNAME], config[CONF_PCE_IDENTIFIER], "1.0.0", entity._dataByFrequency, [])
+        attributes = Util.toAttributes(
+            config[CONF_USERNAME], config[CONF_PCE_IDENTIFIER], "1.0.0", entity.dataByFrequency, []
+        )
 
         logger.info(f"attributes={json.dumps(attributes, indent=2)}")
 
@@ -102,14 +116,12 @@ async def test_toAttribute():
 # ----------------------------------
 def test_toState_low():
 
-    with open('tests/resources/low_daily_data.json') as f:
-        data = {
-            Frequency.DAILY.value: json.load(f)
-        }
+    with open("tests/resources/low_daily_data.json", "r", encoding="utf-8") as f:
+        data = {Frequency.DAILY.value: json.load(f)}
 
     state = Util.toState(data)
 
-    assert (state == 154397.136)
+    assert state == 154397.136
 
     logger.info(f"state={state}")
 
@@ -117,14 +129,12 @@ def test_toState_low():
 # ----------------------------------
 def test_toState_high():
 
-    with open('tests/resources/high_daily_data.json') as f:
-        data = {
-            Frequency.DAILY.value: json.load(f)
-        }
+    with open("tests/resources/high_daily_data.json", "r", encoding="utf-8") as f:
+        data = {Frequency.DAILY.value: json.load(f)}
 
     state = Util.toState(data)
 
-    assert (state == 154405.404)
+    assert state == 154405.404
 
     logger.info(f"state={state}")
 
@@ -132,13 +142,11 @@ def test_toState_high():
 # ----------------------------------
 def test_toState_zero():
 
-    with open('tests/resources/zero_daily_data.json') as f:
-        data = {
-            Frequency.DAILY.value: json.load(f)
-        }
+    with open("tests/resources/zero_daily_data.json", "r", encoding="utf-8") as f:
+        data = {Frequency.DAILY.value: json.load(f)}
 
     state = Util.toState(data)
 
-    assert (state == 154397.136)
+    assert state == 154397.136
 
     logger.info(f"state={state}")
