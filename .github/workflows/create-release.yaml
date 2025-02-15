@@ -65,7 +65,7 @@ jobs:
   #----------------------------------------------
   # Build and publish the pip package and docker image
   build:
-    name: Build
+    name: Bump version to ${{ needs.prepare.outputs.package-version }}
     needs: prepare
     runs-on: "ubuntu-latest"
     steps:
@@ -109,13 +109,4 @@ jobs:
         uses: ./.github/workflows/git-tag
         with:
           tag-name: ${{ needs.prepare.outputs.package-version }}
-
-      #----------------------------------------------
-      #  Set-up python
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
-
-      #----------------------------------------------
-      - name: Build package
-        run: poetry build       
+  
