@@ -1,6 +1,6 @@
+import asyncio
 import json
 import os
-import asyncio
 
 
 # --------------------------------------------------------------------------------------------
@@ -19,7 +19,7 @@ class Manifest:
 
     # ---------------------------------
     @staticmethod
-    def load_manifest(manifestFilePath):
-        with open(manifestFilePath) as jsonFile:
+    def load_manifest(manifestFilePath: str):
+        with open(manifestFilePath, "r", encoding="utf-8") as jsonFile:
             manifest = json.load(jsonFile)
         return manifest

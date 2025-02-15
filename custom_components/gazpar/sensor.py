@@ -1,26 +1,34 @@
 """Support for Gazpar."""
-from datetime import timedelta
+
+import asyncio
 import json
 import logging
 import traceback
-import asyncio
-from datetime import datetime
-
-from pygazpar.client import Client
-from pygazpar.datasource import JsonWebDataSource, ExcelWebDataSource, TestDataSource
-from pygazpar.enum import PropertyName, Frequency
+from datetime import datetime, timedelta
 from typing import Any
 
-from custom_components.gazpar.util import Util
-from custom_components.gazpar.manifest import Manifest
-
-import voluptuous as vol
-
-from homeassistant.components.sensor import PLATFORM_SCHEMA
-from homeassistant.const import CONF_NAME, CONF_PASSWORD, CONF_USERNAME, CONF_SCAN_INTERVAL, UnitOfEnergy
 import homeassistant.helpers.config_validation as cv
+import voluptuous as vol
+from homeassistant.components.sensor import PLATFORM_SCHEMA
+from homeassistant.const import (
+    CONF_NAME,
+    CONF_PASSWORD,
+    CONF_SCAN_INTERVAL,
+    CONF_USERNAME,
+    UnitOfEnergy,
+)
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.event import async_call_later, async_track_time_interval
+from pygazpar.client import Client  # type: ignore
+from pygazpar.datasource import (  # type: ignore
+    ExcelWebDataSource,
+    JsonWebDataSource,
+    TestDataSource,
+)
+from pygazpar.enum import Frequency, PropertyName  # type: ignore
+
+from custom_components.gazpar.manifest import Manifest
+from custom_components.gazpar.util import Util
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -41,21 +49,23 @@ LAST_INDEX = -1
 
 ICON_GAS = "mdi:fire"
 
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
-    vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,  # type: ignore
-    vol.Required(CONF_USERNAME): cv.string,
-    vol.Required(CONF_PASSWORD): cv.string,
-    vol.Required(CONF_PCE_IDENTIFIER): cv.string,
-    vol.Optional(CONF_WAITTIME, default=DEFAULT_WAITTIME): int,  # type: ignore
-    vol.Required(CONF_TMPDIR): cv.string,
-    vol.Optional(CONF_DATASOURCE, default=DEFAULT_DATASOURCE): cv.string,  # type: ignore
-    vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): cv.time_period,  # type: ignore
-    vol.Optional(CONF_LAST_N_DAYS, default=DEFAULT_LAST_N_DAYS): int  # type: ignore
-})
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
+    {
+        vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,  # type: ignore
+        vol.Required(CONF_USERNAME): cv.string,
+        vol.Required(CONF_PASSWORD): cv.string,
+        vol.Required(CONF_PCE_IDENTIFIER): cv.string,
+        vol.Optional(CONF_WAITTIME, default=DEFAULT_WAITTIME): int,  # type: ignore
+        vol.Required(CONF_TMPDIR): cv.string,
+        vol.Optional(CONF_DATASOURCE, default=DEFAULT_DATASOURCE): cv.string,  # type: ignore
+        vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): cv.time_period,  # type: ignore
+        vol.Optional(CONF_LAST_N_DAYS, default=DEFAULT_LAST_N_DAYS): int,  # type: ignore
+    }
+)
 
 
 # --------------------------------------------------------------------------------------------
-async def async_setup_platform(hass, config, add_entities, discovery_info=None):
+async def async_setup_platform(hass, config, add_entities, discovery_info=None):  # pylint: disable=unused-argument
     """Configure the platform and add the Gazpar sensor."""
 
     _LOGGER.debug("Initializing Gazpar platform...")
@@ -91,12 +101,14 @@ async def async_setup_platform(hass, config, add_entities, discovery_info=None):
         version = await Manifest.version()
         _LOGGER.debug(f"version={version}")
 
-        account = GazparAccount(hass, name, username, password, pceIdentifier, wait_time, tmpdir, scan_interval, lastNDays, version, datasource)
+        account = GazparAccount(
+            name, username, password, pceIdentifier, wait_time, tmpdir, scan_interval, lastNDays, version, datasource
+        )
         add_entities(account.sensors, True)
 
         if hass is not None:
             async_call_later(hass, 5, account.async_update_gazpar_data)
-            async_track_time_interval(hass, account.async_update_gazpar_data, account._scan_interval)
+            async_track_time_interval(hass, account.async_update_gazpar_data, scan_interval)
         else:
             await account.async_update_gazpar_data(None)
 
@@ -111,7 +123,19 @@ class GazparAccount:
     """Representation of a Gazpar account."""
 
     # ----------------------------------
-    def __init__(self, hass, name: str, username: str, password: str, pceIdentifier: str, wait_time: int, tmpdir: str, scan_interval: timedelta, lastNDays: int, version: str, datasource: str):
+    def __init__(
+        self,
+        name: str,
+        username: str,
+        password: str,
+        pceIdentifier: str,
+        wait_time: int,
+        tmpdir: str,
+        scan_interval: timedelta,
+        lastNDays: int,
+        version: str,
+        datasource: str,
+    ):
         """Initialise the Gazpar account."""
         self._name = name
         self._username = username
@@ -123,12 +147,11 @@ class GazparAccount:
         self._lastNDays = lastNDays
         self._version = version
         self._datasource = datasource
-        self._dataByFrequency = {}
-        self.sensors = []
-        self._errorMessages = []
+        self._dataByFrequency: dict[str, list[dict[str, Any]]] = {}
+        self.sensors: list[GazparSensor] = []
+        self._errorMessages: list[str] = []
 
-        self.sensors.append(
-            GazparSensor(name, PropertyName.ENERGY.value, UnitOfEnergy.KILO_WATT_HOUR, self))
+        self.sensors.append(GazparSensor(name, PropertyName.ENERGY.value, UnitOfEnergy.KILO_WATT_HOUR, self))
 
     # ----------------------------------
     async def async_update_gazpar_data(self, event_time):
@@ -147,19 +170,23 @@ class GazparAccount:
             elif self._datasource == "excel":
                 client = Client(ExcelWebDataSource(self._username, self._password, self._tmpdir))
             else:
-                raise Exception(f"Invalid datasource value: '{self._datasource}' (valid values are: json | excel | test)")
+                raise Exception(  # pylint: disable=broad-exception-raised
+                    f"Invalid datasource value: '{self._datasource}' (valid values are: json | excel | test)"
+                )
 
             loop = asyncio.get_event_loop()
-            self._dataByFrequency = await loop.run_in_executor(None, client.loadSince, self._pceIdentifier, self._lastNDays)
+            self._dataByFrequency = await loop.run_in_executor(
+                None, client.load_since, self._pceIdentifier, self._lastNDays
+            )
 
             _LOGGER.debug(f"data={json.dumps(self._dataByFrequency, indent=2)}")
 
             _LOGGER.debug("New data have been retrieved successfully from PyGazpar library")
-        except BaseException as exception:
+        except BaseException as exception:  # pylint: disable=broad-exception-caught
             self._dataByFrequency = {}
             errorMessage = "Failed to query PyGazpar library. The exception has been raised: {0}"
             self._errorMessages.append(errorMessage.format(str(exception)))
-            _LOGGER.error(errorMessage.format(traceback.format_exc()))
+            _LOGGER.error(errorMessage.format(traceback.format_exc()))  # pylint: disable=logging-format-interpolation
             if event_time is None:
                 raise
 
@@ -216,7 +243,7 @@ class GazparSensor(Entity):
         self._identifier = identifier
         self._unit = unit
         self._account = account
-        self._dataByFrequency = {}
+        self._dataByFrequency: dict[str, list[dict[str, Any]]] = {}
         self._selectByFrequence = {
             Frequency.HOURLY: GazparSensor.__selectHourly,
             Frequency.DAILY: GazparSensor.__selectDaily,
@@ -224,6 +251,12 @@ class GazparSensor(Entity):
             Frequency.MONTHLY: GazparSensor.__selectMonthly,
             Frequency.YEARLY: GazparSensor.__selectYearly,
         }
+
+    # ----------------------------------
+    @property
+    def dataByFrequency(self):
+        """Return the data dictionary by frequency."""
+        return self._dataByFrequency
 
     # ----------------------------------
     @property
@@ -254,7 +287,13 @@ class GazparSensor(Entity):
     def extra_state_attributes(self):
         """Return the state attributes of the sensor."""
 
-        return Util.toAttributes(self._account.username, self._account.pceIdentifier, self._account.version, self._dataByFrequency, self._account.errorMessages)
+        return Util.toAttributes(
+            self._account.username,
+            self._account.pceIdentifier,
+            self._account.version,
+            self._dataByFrequency,
+            self._account.errorMessages,
+        )
 
     # ----------------------------------
     def update(self):
@@ -276,7 +315,7 @@ class GazparSensor(Entity):
                     self._dataByFrequency[frequency.value] = []
                     _LOGGER.debug(f"No {frequency} data available yet for update")
 
-        except BaseException:
+        except BaseException:  # pylint: disable=broad-exception-caught
             _LOGGER.error(f"Failed to update HA data. The exception has been raised: {traceback.format_exc()}")
 
     MAX_DAILY_READINGS = 14
@@ -294,7 +333,7 @@ class GazparSensor(Entity):
     # ----------------------------------
     @staticmethod
     def __selectDaily(data: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        return data[:GazparSensor.MAX_DAILY_READINGS]
+        return data[: GazparSensor.MAX_DAILY_READINGS]
 
     # ----------------------------------
     @staticmethod
@@ -309,7 +348,7 @@ class GazparSensor(Entity):
 
             weekDate = GazparSensor.__getIsoCalendar(reading["time_period"])
 
-            if (index < GazparSensor.MAX_WEEKLY_READINGS / 2):
+            if index < GazparSensor.MAX_WEEKLY_READINGS / 2:
 
                 weekDate = (weekDate.weekday, weekDate.week, weekDate.year - 1)
 
@@ -317,7 +356,7 @@ class GazparSensor(Entity):
 
                 res.append(reading)
             else:
-                if (previousYearWeekDate.count((weekDate.weekday, weekDate.week, weekDate.year)) > 0):
+                if previousYearWeekDate.count((weekDate.weekday, weekDate.week, weekDate.year)) > 0:
                     res.append(reading)
 
             index += 1
@@ -327,12 +366,12 @@ class GazparSensor(Entity):
     # ----------------------------------
     @staticmethod
     def __selectMonthly(data: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        return data[:GazparSensor.MAX_MONTHLY_READINGS]
+        return data[: GazparSensor.MAX_MONTHLY_READINGS]
 
     # ----------------------------------
     @staticmethod
     def __selectYearly(data: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        return data[:GazparSensor.MAX_YEARLY_READINGS]
+        return data[: GazparSensor.MAX_YEARLY_READINGS]
 
     # ----------------------------------
     @staticmethod

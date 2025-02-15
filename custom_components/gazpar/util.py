@@ -1,7 +1,20 @@
-from pygazpar.enum import PropertyName, Frequency
-from homeassistant.const import CONF_USERNAME, ATTR_ATTRIBUTION, ATTR_UNIT_OF_MEASUREMENT, ATTR_FRIENDLY_NAME, ATTR_ICON, ATTR_DEVICE_CLASS, UnitOfEnergy
-from homeassistant.components.sensor.const import ATTR_STATE_CLASS, SensorStateClass, SensorDeviceClass
 from typing import Any, Union
+
+from homeassistant.components.sensor.const import (
+    ATTR_STATE_CLASS,
+    SensorDeviceClass,
+    SensorStateClass,
+)
+from homeassistant.const import (
+    ATTR_ATTRIBUTION,
+    ATTR_DEVICE_CLASS,
+    ATTR_FRIENDLY_NAME,
+    ATTR_ICON,
+    ATTR_UNIT_OF_MEASUREMENT,
+    CONF_USERNAME,
+    UnitOfEnergy,
+)
+from pygazpar.enum import Frequency, PropertyName  # type: ignore
 
 HA_ATTRIBUTION = "Data provided by GrDF"
 
@@ -38,13 +51,19 @@ class Util:
                 startIndex = dailyData[currentIndex][PropertyName.START_INDEX.value]
                 endIndex = dailyData[currentIndex][PropertyName.END_INDEX.value]
 
-                while (startIndex is not None) and (endIndex is not None) and (currentIndex < len(dailyData)) and (float(startIndex) == float(endIndex)):
+                while (
+                    (startIndex is not None)
+                    and (endIndex is not None)
+                    and (currentIndex < len(dailyData))
+                    and (float(startIndex) == float(endIndex))
+                ):
                     energy = dailyData[currentIndex][PropertyName.ENERGY.value]
                     if energy is not None:
                         cumulativeEnergy += float(energy)
                     currentIndex += 1
-                    startIndex = dailyData[currentIndex][PropertyName.START_INDEX.value]
-                    endIndex = dailyData[currentIndex][PropertyName.END_INDEX.value]                    
+                    if currentIndex < len(dailyData):
+                        startIndex = dailyData[currentIndex][PropertyName.START_INDEX.value]
+                        endIndex = dailyData[currentIndex][PropertyName.END_INDEX.value]
 
                 currentIndex = min(currentIndex, len(dailyData) - 1)
 
@@ -67,7 +86,13 @@ class Util:
 
     # ----------------------------------
     @staticmethod
-    def toAttributes(username: str, pceIdentifier: str, version: str, pygazparData: dict[str, list[dict[str, Any]]], errorMessages: list[str]) -> dict[str, Any]:
+    def toAttributes(
+        username: str,
+        pceIdentifier: str,
+        version: str,
+        pygazparData: dict[str, list[dict[str, Any]]],
+        errorMessages: list[str],
+    ) -> dict[str, Any]:
 
         res = {
             ATTR_ATTRIBUTION: HA_ATTRIBUTION,
@@ -80,11 +105,11 @@ class Util:
             ATTR_DEVICE_CLASS: SensorDeviceClass.ENERGY,
             ATTR_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
             ATTR_ERROR_MESSAGES: errorMessages,
-            str(Frequency.HOURLY): {},
-            str(Frequency.DAILY): {},
-            str(Frequency.WEEKLY): {},
-            str(Frequency.MONTHLY): {},
-            str(Frequency.YEARLY): {},
+            str(Frequency.HOURLY): list[dict[str, Any]](),
+            str(Frequency.DAILY): list[dict[str, Any]](),
+            str(Frequency.WEEKLY): list[dict[str, Any]](),
+            str(Frequency.MONTHLY): list[dict[str, Any]](),
+            str(Frequency.YEARLY): list[dict[str, Any]](),
         }
 
         if len(pygazparData) > 0:

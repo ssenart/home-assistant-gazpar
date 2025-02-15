@@ -65,7 +65,7 @@ jobs:
   #----------------------------------------------
   # Build and publish the pip package and docker image
   build:
-    name: Build
+    name: Bump version to ${{ needs.prepare.outputs.package-version }}
     needs: prepare
     runs-on: "ubuntu-latest"
     steps:
@@ -92,13 +92,13 @@ jobs:
           contents="$(jq '.version = "${{ needs.prepare.outputs.package-version }}"' ./custom_components/gazpar/manifest.json)" && echo -E "${contents}" > ./custom_components/gazpar/manifest.json
 
       #----------------------------------------------
-      # Commit the changes
+      # Commit the changes in pyproject.toml and manifest.json
       - name: Commit changes
         if: true
         run: |
           git config --global user.name github-actions
           git config --global user.email github-actions@github.com
-          git add pyproject.toml
+          git add pyproject.toml ./custom_components/gazpar/manifest.json
           git commit --allow-empty -m "Bump version to ${{ needs.prepare.outputs.package-version }}"
           git push
 
@@ -109,13 +109,4 @@ jobs:
         uses: ./.github/workflows/git-tag
         with:
           tag-name: ${{ needs.prepare.outputs.package-version }}
-
-      #----------------------------------------------
-      #  Set-up python
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
-
-      #----------------------------------------------
-      - name: Build package
-        run: poetry build       
+  
