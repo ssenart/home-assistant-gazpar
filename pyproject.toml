@@ -1,6 +1,6 @@
 [project]
 name = "home-assistant-gazpar"
-version = "1.3.12-beta1"
+version = "1.3.12-beta.23"
 description = "GrDF Gazpar integration permits to integrate in Home Assistant all your gas consumption data"
 license = { file = "LICENSE" }
 readme = "README.md"
