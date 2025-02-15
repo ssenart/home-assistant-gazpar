@@ -27,7 +27,7 @@ permissions:
 
 env:
   DEFAULT_PYTHON_VERSION: "3.13"
-  TARGET_PYTHON_VERSIONS: "[ '3.10', '3.11', '3.12', '3.13' ]"
+  TARGET_PYTHON_VERSIONS: "[ '3.13' ]"
 
 jobs:
   #----------------------------------------------
