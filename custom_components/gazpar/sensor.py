@@ -65,7 +65,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 
 
 # --------------------------------------------------------------------------------------------
-async def async_setup_platform(hass, config, add_entities):
+async def async_setup_platform(hass, config, add_entities, discovery_info=None):  # pylint: disable=unused-argument
     """Configure the platform and add the Gazpar sensor."""
 
     _LOGGER.debug("Initializing Gazpar platform...")
