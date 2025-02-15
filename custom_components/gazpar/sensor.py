@@ -20,7 +20,11 @@ from homeassistant.const import (
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.event import async_call_later, async_track_time_interval
 from pygazpar.client import Client  # type: ignore
-from pygazpar.datasource import ExcelWebDataSource, JsonWebDataSource, TestDataSource  # type: ignore
+from pygazpar.datasource import (  # type: ignore
+    ExcelWebDataSource,
+    JsonWebDataSource,
+    TestDataSource,
+)
 from pygazpar.enum import Frequency, PropertyName  # type: ignore
 
 from custom_components.gazpar.manifest import Manifest
