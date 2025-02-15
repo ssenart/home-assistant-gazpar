@@ -14,7 +14,7 @@ from homeassistant.const import (
     CONF_USERNAME,
     UnitOfEnergy,
 )
-from pygazpar.enum import Frequency, PropertyName
+from pygazpar.enum import Frequency, PropertyName  # type: ignore
 
 HA_ATTRIBUTION = "Data provided by GrDF"
 
@@ -105,11 +105,11 @@ class Util:
             ATTR_DEVICE_CLASS: SensorDeviceClass.ENERGY,
             ATTR_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
             ATTR_ERROR_MESSAGES: errorMessages,
-            str(Frequency.HOURLY): {},
-            str(Frequency.DAILY): {},
-            str(Frequency.WEEKLY): {},
-            str(Frequency.MONTHLY): {},
-            str(Frequency.YEARLY): {},
+            str(Frequency.HOURLY): list[dict[str, Any]](),
+            str(Frequency.DAILY): list[dict[str, Any]](),
+            str(Frequency.WEEKLY): list[dict[str, Any]](),
+            str(Frequency.MONTHLY): list[dict[str, Any]](),
+            str(Frequency.YEARLY): list[dict[str, Any]](),
         }
 
         if len(pygazparData) > 0:

@@ -19,9 +19,9 @@ from homeassistant.const import (
 )
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.event import async_call_later, async_track_time_interval
-from pygazpar.client import Client
-from pygazpar.datasource import ExcelWebDataSource, JsonWebDataSource, TestDataSource
-from pygazpar.enum import Frequency, PropertyName
+from pygazpar.client import Client  # type: ignore
+from pygazpar.datasource import ExcelWebDataSource, JsonWebDataSource, TestDataSource  # type: ignore
+from pygazpar.enum import Frequency, PropertyName  # type: ignore
 
 from custom_components.gazpar.manifest import Manifest
 from custom_components.gazpar.util import Util
@@ -143,9 +143,9 @@ class GazparAccount:
         self._lastNDays = lastNDays
         self._version = version
         self._datasource = datasource
-        self._dataByFrequency = {}
-        self.sensors = []
-        self._errorMessages = []
+        self._dataByFrequency: dict[str, list[dict[str, Any]]] = {}
+        self.sensors: list[GazparSensor] = []
+        self._errorMessages: list[str] = []
 
         self.sensors.append(GazparSensor(name, PropertyName.ENERGY.value, UnitOfEnergy.KILO_WATT_HOUR, self))
 
@@ -239,7 +239,7 @@ class GazparSensor(Entity):
         self._identifier = identifier
         self._unit = unit
         self._account = account
-        self._dataByFrequency = {}
+        self._dataByFrequency: dict[str, list[dict[str, Any]]] = {}
         self._selectByFrequence = {
             Frequency.HOURLY: GazparSensor.__selectHourly,
             Frequency.DAILY: GazparSensor.__selectDaily,

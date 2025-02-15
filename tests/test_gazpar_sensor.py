@@ -3,7 +3,7 @@ import logging
 import os
 
 import pytest
-from pygazpar.enum import Frequency
+from pygazpar.enum import Frequency  # type: ignore
 
 from custom_components.gazpar.sensor import (
     CONF_DATASOURCE,
