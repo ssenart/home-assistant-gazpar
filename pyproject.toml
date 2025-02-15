@@ -1,0 +1,62 @@
+[project]
+name = "home-assistant-gazpar"
+version = "1.3.12"
+description = "GrDF Gazpar integration permits to integrate in Home Assistant all your gas consumption data"
+license = { file = "LICENSE" }
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+authors = [
+    { name = "Stéphane Senart" }
+]
+classifiers = [
+    "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+    "pygazpar>=1.3.0b4",
+]
+
+[tool.poetry]
+requires-poetry = ">=2.0"
+include = ["CHANGELOG.md"]
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.4"
+pytest-asyncio = "^0.25.0"
+flake8-pyproject = "^1.2.3"
+pylint = "^3.3.4"
+black = "^25.1.0"
+flake8 = "^7.1.1"
+isort = "^6.0.0"
+mypy = "^1.14.1"
+ruff = "^0.9.4"
+python-dotenv = "^1.0.1"
+homeassistant = "^2025.1.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pylint.'MESSAGES CONTROL']
+ignore = ".venv"
+max-line-length = 120
+disable = "C,W1203,R0902,R0913,R0914,R0917,R0801"
+
+[tool.black]
+exclude = ".venv"
+line-length = 120
+
+[tool.flake8]
+max-line-length = 120
+extend-ignore = [ "E203", "W503", "E704", "E501" ]
+exclude = [".venv"]
+
+[tool.isort]
+profile = "black"
+skip = ".venv"
+
+[tool.mypy]
+exclude = [ ".venv" ]
+
+[tool.ruff]
+exclude = [ ".venv" ]
+line-length = 120
