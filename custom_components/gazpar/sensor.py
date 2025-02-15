@@ -176,7 +176,7 @@ class GazparAccount:
 
             loop = asyncio.get_event_loop()
             self._dataByFrequency = await loop.run_in_executor(
-                None, client.loadSince, self._pceIdentifier, self._lastNDays
+                None, client.load_since, self._pceIdentifier, self._lastNDays
             )
 
             _LOGGER.debug(f"data={json.dumps(self._dataByFrequency, indent=2)}")
