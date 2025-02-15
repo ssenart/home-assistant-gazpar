@@ -1,6 +1,6 @@
-assembly-file-versioning-format: '{MajorMinorPatch}-{PreReleaseLabel}{CommitsSinceVersionSource}'
-assembly-versioning-format: '{MajorMinorPatch}-{PreReleaseLabel}{CommitsSinceVersionSource}'
-assembly-informational-format: '{MajorMinorPatch}-{PreReleaseLabel}{CommitsSinceVersionSource}'
+assembly-file-versioning-format: '{MajorMinorPatch}-{PreReleaseLabel}.{PreReleaseNumber}'
+assembly-versioning-format: '{MajorMinorPatch}-{PreReleaseLabel}.{PreReleaseNumber}'
+assembly-informational-format: '{MajorMinorPatch}-{PreReleaseLabel}.{PreReleaseNumber}'
 
 branches:
   develop:
