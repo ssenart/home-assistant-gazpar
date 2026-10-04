@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Upgrade PyGazpar library version to 1.4.0a3, which brings pydantic as a new dependency.
 - Release process: the create-release workflow takes an explicit version, and checks it against the branch, the existing tags and the changelog before anything is changed.
 - Release process: the changelog is finalized automatically, and the GitHub release notes come from its section.
 - Release process: GitHub releases are created as drafts by default. A dry run option validates and bumps a release without pushing or publishing it.
