@@ -35,7 +35,6 @@ jobs:
   prepare:
     name: Prepare
     outputs:
-      package-version: ${{ steps.compute-version.outputs.pep440-version }}
       target_python_versions: ${{ env.TARGET_PYTHON_VERSIONS }}
       default_python_version: ${{ env.DEFAULT_PYTHON_VERSION }}
     runs-on: ubuntu-latest
@@ -53,16 +52,9 @@ jobs:
           fetch-depth: 0
 
       #----------------------------------------------
-      # Compute the version of the project based in the current checkout branch
-      - name: Compute version
-        id: compute-version
-        uses: ./.github/workflows/compute-version
-
-      #----------------------------------------------
       # Send to Github Actions
       - name: Display information
         run: |
-          echo "package-version=${{ steps.compute-version.outputs.pep440-version }}"
           echo "target-python-versions=${{ env.TARGET_PYTHON_VERSIONS }}"
           echo "default-python-version=${{ env.DEFAULT_PYTHON_VERSION }}"
 

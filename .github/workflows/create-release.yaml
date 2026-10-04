@@ -3,81 +3,194 @@ name: Create Release
 on:
   workflow_dispatch:
     inputs:
-      package-version:
-        description: "Package version"
-        required: false
-        default: ""
+      version:
+        description: "Version to release (PEP 440): 0.5.1a4 on develop, 0.5.1b1 or 0.5.1rc1 on release/0.5.1, 0.5.1 on main"
+        required: true
         type: string
-        
-permissions:
-  contents: write # Allow to commit and push.
+      draft:
+        description: "Create the GitHub release as a draft"
+        required: false
+        default: true
+        type: boolean
+      dry_run:
+        description: "Dry run: validate, bump and build, but do not push, publish or release"
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   DEFAULT_PYTHON_VERSION: "3.13"
 
 jobs:
   #----------------------------------------------
-  # Prepare
-  prepare:
-    name: Prepare
-    outputs:
-      package-version: ${{ steps.select-package-version.outputs.package-version }}
-      default_python_version: ${{ env.DEFAULT_PYTHON_VERSION }}
+  # Preflight: validate everything before anything is changed or published
+  preflight:
+    name: Preflight
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read # Read the CI status of the commit
+    outputs:
+      environment: ${{ steps.checks.outputs.environment }}
+      is_prerelease: ${{ steps.checks.outputs.is_prerelease }}
+      last_tag: ${{ steps.checks.outputs.last_tag }}
     steps:
       #----------------------------------------------
-      # Display Github environment variables
-      - name: Display Github environment variables
-        run: printenv | grep '^GITHUB_' | sort
-
-      #----------------------------------------------
-      # Check-out repo
+      # Check-out repo, with all tags
       - name: Check out repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      #----------------------------------------------
-      # Compute the version of the project based in the current checkout branch
-      - name: Compute version
-        id: compute-version
-        uses: ./.github/workflows/compute-version
-        if: ${{ inputs.package-version == '' }}
-
-      #----------------------------------------------
-      # Select package version
-      - name: Select package version
-        id: select-package-version
-        run: |
-          if [ -z "${{ inputs.package-version }}" ]; then
-            echo "package-version=${{ steps.compute-version.outputs.pep440-version }}" >> $GITHUB_OUTPUT
-          else
-            echo "package-version=${{ inputs.package-version }}" >> $GITHUB_OUTPUT
-          fi
-
-      #----------------------------------------------
-      # Display versions
-      - name: Display versions
-        run: |
-          echo "package-version=${{ steps.select-package-version.outputs.package-version }}"
-          echo "default-python-version=${{ env.DEFAULT_PYTHON_VERSION }}"
-
-  #----------------------------------------------
-  # Build and publish the pip package and docker image
-  build:
-    name: Bump version to ${{ needs.prepare.outputs.package-version }}
-    needs: prepare
-    runs-on: "ubuntu-latest"
-    steps:
-      #----------------------------------------------
-      # Checkout repo
-      - name: Check out repository
-        uses: actions/checkout@v4
-        with:
           fetch-tags: true
 
       #----------------------------------------------
-      # Install & configure poetry  -----
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
+
+      #----------------------------------------------
+      # Validate the version against the branch, the existing tags and the changelog
+      - name: Validate version, branch, tags and changelog
+        id: checks
+        env:
+          VERSION: ${{ inputs.version }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          pip install --quiet packaging
+          python3 - <<'EOF'
+          import os
+          import re
+          import subprocess
+          import sys
+          from pathlib import Path
+
+          from packaging.version import InvalidVersion, Version
+
+
+          def fail(message):
+              print(f"::error::{message}")
+              sys.exit(1)
+
+
+          def git(*args):
+              return subprocess.run(["git", *args], capture_output=True, text=True, check=True).stdout.strip()
+
+
+          version_text = os.environ["VERSION"].strip()
+          branch = os.environ["BRANCH"]
+
+          try:
+              version = Version(version_text)
+          except InvalidVersion:
+              fail(f"'{version_text}' is not a valid PEP 440 version (e.g. 0.5.1a4, 0.5.1b1, 0.5.1)")
+          if version.is_devrelease or version.local:
+              fail("Dev and local versions cannot be released")
+
+          kind = version.pre[0] if version.pre else None  # "a", "b", "rc" or None for a final version
+
+          # Channel rules: which version kind is allowed on which branch, and where it is published
+          if branch == "main":
+              if kind is not None:
+                  fail("main only accepts final versions (e.g. 0.5.1)")
+              environment = "pypi"
+          elif branch == "develop":
+              if kind != "a":
+                  fail("develop only accepts alpha versions (e.g. 0.5.1a4)")
+              environment = "pypi"
+          elif branch.startswith("release/"):
+              if kind not in ("b", "rc"):
+                  fail("release/* only accepts beta (bN) or release candidate (rcN) versions")
+              if version.base_version != branch.removeprefix("release/"):
+                  fail(f"Version base {version.base_version} does not match branch {branch}")
+              environment = "pypi"
+          elif branch.startswith("feature/"):
+              environment = "testpypi"
+          else:
+              fail(f"Releases are not allowed from branch '{branch}'")
+
+          # The version must be new and must be greater than every existing tag
+          if version_text in git("tag", "--list").splitlines():
+              fail(f"Tag {version_text} already exists")
+          tags = []
+          for name in git("tag", "--list").splitlines():
+              try:
+                  tags.append((Version(name), name))
+              except InvalidVersion:
+                  pass
+          last_tag = ""
+          if tags:
+              highest, last_tag = max(tags)
+              if version <= highest:
+                  fail(f"{version_text} must be greater than the highest existing tag {last_tag}")
+
+          # The changelog must have something to release
+          changelog = Path("CHANGELOG.md").read_text(encoding="utf-8")
+          section = re.search(r"^## \[Unreleased\][^\n]*\n(.*?)(?=^## \[|\Z)", changelog, re.M | re.S)
+          if not section or not section.group(1).strip():
+              fail("The [Unreleased] section of CHANGELOG.md is missing or empty")
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"environment={environment}\n")
+              output.write(f"is_prerelease={'true' if kind else 'false'}\n")
+              output.write(f"last_tag={last_tag}\n")
+
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
+              summary.write("### Preflight passed\n\n")
+              summary.write("| | |\n|---|---|\n")
+              summary.write(f"| Version | `{version_text}` |\n")
+              summary.write(f"| Branch | `{branch}` |\n")
+              summary.write(f"| Last tag | `{last_tag or '-'}` |\n")
+              summary.write(f"| Pre-release | {'yes' if kind else 'no'} |\n")
+              summary.write(f"| Publish target | {environment} |\n")
+          EOF
+
+      #----------------------------------------------
+      # Check that CI passed on this exact commit
+      - name: Check CI status of this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          conclusion="$(gh run list --workflow ci.yaml --branch "$BRANCH" --limit 30 --json headSha,conclusion \
+            | jq -r --arg sha "$GITHUB_SHA" 'map(select(.headSha == $sha)) | .[0].conclusion // ""')"
+          if [ "$conclusion" != "success" ]; then
+            echo "::error::CI on commit $GITHUB_SHA is '${conclusion:-not found}', it must be 'success'"
+            exit 1
+          fi
+
+  #----------------------------------------------
+  # Release: bump, finalize the changelog, build, publish, then commit, tag and release.
+  # Everything irreversible (PyPI, DockerHub) runs before the commit and the tag are pushed.
+  release:
+    name: Release ${{ inputs.version }}
+    needs: preflight
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Push the bump commit and the tag, create the GitHub release
+    env:
+      VERSION: ${{ inputs.version }}
+      LAST_TAG: ${{ needs.preflight.outputs.last_tag }}
+    steps:
+      #----------------------------------------------
+      # Check-out repo, with all tags
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      #----------------------------------------------
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
+
+      #----------------------------------------------
       - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
@@ -86,27 +199,109 @@ jobs:
           virtualenvs-path: .venv
 
       #----------------------------------------------
-      - name: Bump version to ${{ needs.prepare.outputs.package-version }}
+      # Bump version in pyproject.toml, config.yaml and build.yaml
+      - name: Bump version files
         run: |
-          poetry version ${{ needs.prepare.outputs.package-version }}
-          contents="$(jq '.version = "${{ needs.prepare.outputs.package-version }}"' ./custom_components/gazpar/manifest.json)" && echo -E "${contents}" > ./custom_components/gazpar/manifest.json
+          poetry version "$VERSION"
+          jq --arg v "$VERSION" '.version = $v' custom_components/gazpar/manifest.json > manifest.tmp
+          mv manifest.tmp custom_components/gazpar/manifest.json
 
       #----------------------------------------------
-      # Commit the changes in pyproject.toml and manifest.json
-      - name: Commit changes
-        if: true
+      # Finalize CHANGELOG.md: [Unreleased] becomes the version, a new empty [Unreleased] is added on top.
+      # The released section is exported as the GitHub release notes.
+      - name: Finalize CHANGELOG.md
+        run: |
+          python3 - <<'EOF'
+          import datetime
+          import os
+          import re
+          import subprocess
+          from pathlib import Path
+
+          version = os.environ["VERSION"]
+          last_tag = os.environ["LAST_TAG"]
+          path = Path("CHANGELOG.md")
+          text = path.read_text(encoding="utf-8")
+
+          # The body of [Unreleased] runs from its heading up to the next version heading
+          section = re.search(r"^## \[Unreleased\][^\n]*\n(?P<body>.*?)(?=^## \[|\Z)", text, re.M | re.S)
+          body = section.group("body")
+          today = datetime.date.today().isoformat()
+          text = (
+              text[: section.start()]
+              + f"## [Unreleased]\n\n## [{version}] - {today}\n"
+              + body
+              + text[section.end():]
+          )
+
+          # Compare links at the bottom of the file, regenerated for the new version
+          remote = subprocess.run(["git", "remote", "get-url", "origin"], capture_output=True, text=True, check=True).stdout.strip()
+          repo = re.sub(r"^(git@github\.com:|https://github\.com/)", "https://github.com/", remote).removesuffix(".git")
+          links = [f"[Unreleased]: {repo}/compare/{version}...HEAD"]
+          if last_tag:
+              links.append(f"[{version}]: {repo}/compare/{last_tag}...{version}")
+          lines = [line for line in text.splitlines() if not re.match(rf"^\[(Unreleased|{re.escape(version)})\]: ", line)]
+          first_footer = next((i for i, line in enumerate(lines) if re.match(r"^\[[^\]]+\]: ", line)), None)
+          if first_footer is None:
+              if lines and lines[-1].strip():
+                  lines.append("")
+              lines.extend(links)
+          else:
+              lines[first_footer:first_footer] = links
+          path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+          Path(os.environ["RUNNER_TEMP"], "release-notes.md").write_text(body.strip() + "\n", encoding="utf-8")
+          EOF
+
+      #----------------------------------------------
+      # Commit the version bump, tag it and push both atomically
+      - name: Commit version bump
         run: |
           git config --global user.name github-actions
           git config --global user.email github-actions@github.com
-          git add pyproject.toml ./custom_components/gazpar/manifest.json
-          git commit --allow-empty -m "Bump version to ${{ needs.prepare.outputs.package-version }}"
-          git push
+          git add pyproject.toml CHANGELOG.md custom_components/gazpar/manifest.json
+          git commit --allow-empty -m "Bump version to $VERSION"
+
+      - name: Tag and push
+        if: ${{ !inputs.dry_run }}
+        run: |
+          git tag -a "$VERSION" -m "Release $VERSION"
+          git push --atomic origin "HEAD:refs/heads/${GITHUB_REF_NAME}" "refs/tags/$VERSION"
 
       #----------------------------------------------
-      # Tag the commit
-      - name: Git tag
-        if: true
-        uses: ./.github/workflows/git-tag
-        with:
-          tag-name: ${{ needs.prepare.outputs.package-version }}
-  
+      # Create the GitHub release from the changelog section
+      - name: Create GitHub release
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DRAFT: ${{ inputs.draft }}
+          PRERELEASE: ${{ needs.preflight.outputs.is_prerelease }}
+        run: |
+          args=(--title "$VERSION" --notes-file "$RUNNER_TEMP/release-notes.md" --target "$(git rev-parse HEAD)")
+          if [ "$DRAFT" = "true" ]; then args+=(--draft); fi
+          if [ "$PRERELEASE" = "true" ]; then args+=(--prerelease); fi
+          url="$(gh release create "$VERSION" "${args[@]}")"
+          echo "- GitHub release: $url" >> "$GITHUB_STEP_SUMMARY"
+
+      #----------------------------------------------
+      # Summary report, written even when a step failed
+      - name: Summary
+        if: ${{ always() }}
+        run: |
+          {
+            echo "### Release $VERSION: ${{ job.status }}"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Branch | \`$GITHUB_REF_NAME\` |"
+            echo "| Last tag | \`${LAST_TAG:--}\` |"
+            echo "| Pre-release | ${{ needs.preflight.outputs.is_prerelease }} |"
+            echo "| Draft | ${{ inputs.draft }} |"
+            echo "| Dry run | ${{ inputs.dry_run }} |"
+            echo "| Commit | \`$GITHUB_SHA\` |"
+            echo ""
+            echo "Files changed:"
+            echo '```'
+            git diff --stat "origin/$GITHUB_REF_NAME" 2>/dev/null || echo "(no changes)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
