@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.15a1] - 2026-10-04
+
 ### Changed
 
 - Upgrade PyGazpar library version to 1.4.0a3, which brings pydantic as a new dependency.
@@ -157,3 +159,6 @@ Anonymize the README.
 
 ### Added
 - Add HACS support.
+
+[Unreleased]: https://github.com/ssenart/home-assistant-gazpar/compare/1.3.15a1...HEAD
+[1.3.15a1]: https://github.com/ssenart/home-assistant-gazpar/compare/1.3.14...1.3.15a1
