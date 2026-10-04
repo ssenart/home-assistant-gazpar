@@ -156,12 +156,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           BRANCH: ${{ github.ref_name }}
         run: |
-          conclusion="$(gh run list --workflow ci.yaml --branch "$BRANCH" --limit 30 --json headSha,conclusion \
-            | jq -r --arg sha "$GITHUB_SHA" 'map(select(.headSha == $sha)) | .[0].conclusion // ""')"
-          if [ "$conclusion" != "success" ]; then
-            echo "::error::CI on commit $GITHUB_SHA is '${conclusion:-not found}', it must be 'success'"
-            exit 1
-          fi
+          for attempt in $(seq 1 60); do
+            state="$(gh run list --workflow ci.yaml --branch "$BRANCH" --limit 30 --json headSha,status,conclusion \
+              | jq -r --arg sha "$GITHUB_SHA" '[.[] | select(.headSha == $sha)] | .[0] | "\(.status // "missing") \(.conclusion // "")"')"
+            case "$state" in
+              "completed success") echo "CI passed on $GITHUB_SHA"; exit 0 ;;
+              "completed "*) echo "::error::CI on commit $GITHUB_SHA finished with '${state#completed }', it must be 'success'"; exit 1 ;;
+              *) echo "CI on $GITHUB_SHA is '${state%% *}', waiting ($attempt/60)"; sleep 30 ;;
+            esac
+          done
+          echo "::error::Timed out after 30 minutes waiting for CI on $GITHUB_SHA (last state: '$state')"
+          exit 1
 
   #----------------------------------------------
   # Release: bump, finalize the changelog, build, publish, then commit, tag and release.
