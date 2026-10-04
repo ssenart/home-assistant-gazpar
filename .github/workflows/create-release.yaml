@@ -226,15 +226,18 @@ jobs:
           version = os.environ["VERSION"]
           last_tag = os.environ["LAST_TAG"]
           path = Path("CHANGELOG.md")
-          text = path.read_text(encoding="utf-8")
+          # Read without newline translation: keep every line's own ending (some changelogs mix CRLF and LF)
+          with open(path, encoding="utf-8", newline="") as f:
+              text = f.read()
 
           # The body of [Unreleased] runs from its heading up to the next version heading
-          section = re.search(r"^## \[Unreleased\][^\n]*\n(?P<body>.*?)(?=^## \[|\Z)", text, re.M | re.S)
+          section = re.search(r"^## \[Unreleased\][^\r\n]*\r?\n(?P<body>.*?)(?=^## \[|\Z)", text, re.M | re.S)
+          heading_eol = "\r\n" if text[section.start():text.index("\n", section.start())].endswith("\r") else "\n"
           body = section.group("body")
           today = datetime.date.today().isoformat()
           text = (
               text[: section.start()]
-              + f"## [Unreleased]\n\n## [{version}] - {today}\n"
+              + f"## [Unreleased]{heading_eol}{heading_eol}## [{version}] - {today}{heading_eol}"
               + body
               + text[section.end():]
           )
@@ -245,15 +248,17 @@ jobs:
           links = [f"[Unreleased]: {repo}/compare/{version}...HEAD"]
           if last_tag:
               links.append(f"[{version}]: {repo}/compare/{last_tag}...{version}")
-          lines = [line for line in text.splitlines() if not re.match(rf"^\[(Unreleased|{re.escape(version)})\]: ", line)]
-          first_footer = next((i for i, line in enumerate(lines) if re.match(r"^\[[^\]]+\]: ", line)), None)
+          lines = [l for l in text.splitlines(keepends=True) if not re.match(rf"^\[(Unreleased|{re.escape(version)})\]: ", l)]
+          first_footer = next((i for i, l in enumerate(lines) if re.match(r"^\[[^\]]+\]: ", l)), None)
           if first_footer is None:
               if lines and lines[-1].strip():
-                  lines.append("")
-              lines.extend(links)
+                  lines.append(heading_eol)
+              lines.extend(link + heading_eol for link in links)
           else:
-              lines[first_footer:first_footer] = links
-          path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+              footer_eol = "\r\n" if lines[first_footer].endswith("\r\n") else "\n"
+              lines[first_footer:first_footer] = [link + footer_eol for link in links]
+          with open(path, "w", encoding="utf-8", newline="") as f:
+              f.write("".join(lines))
 
           Path(os.environ["RUNNER_TEMP"], "release-notes.md").write_text(body.strip() + "\n", encoding="utf-8")
           EOF
