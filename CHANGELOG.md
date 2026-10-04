@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Python 3.14.2 or newer is now required for development, and CI runs on Python 3.14.
+- Development dependency: Home Assistant `^2026.9.0`.
+
+### Security
+
+- Locked dependencies updated to fix open Dependabot alerts: aiohttp, Pillow, PyJWT, urllib3, cryptography, anyio, idna, pycares, python-dotenv, uv, mashumaro, requests, pyOpenSSL, orjson and Jinja2.
+
 ## [1.3.15a1] - 2026-10-04
 
 ### Changed
