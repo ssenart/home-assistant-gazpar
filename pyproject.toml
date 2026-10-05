@@ -35,7 +35,7 @@ build-backend = "poetry.core.masonry.api"
 exclude = [ ".venv" ]
 
 [tool.ruff]
-exclude = [ ".venv" ]
+exclude = [ ".venv", "*.md" ]
 line-length = 120
 
 [tool.ruff.lint]
