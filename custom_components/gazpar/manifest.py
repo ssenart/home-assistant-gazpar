@@ -5,7 +5,6 @@ import os
 
 # --------------------------------------------------------------------------------------------
 class Manifest:
-
     # ---------------------------------
     @staticmethod
     async def version():
@@ -20,6 +19,5 @@ class Manifest:
     # ---------------------------------
     @staticmethod
     def load_manifest(manifestFilePath: str):
-        with open(manifestFilePath, "r", encoding="utf-8") as jsonFile:
-            manifest = json.load(jsonFile)
-        return manifest
+        with open(manifestFilePath, encoding="utf-8") as jsonFile:
+            return json.load(jsonFile)

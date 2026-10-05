@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Union
+from typing import Any
 
 from pygazpar.enum import Frequency, PropertyName  # type: ignore
 
@@ -14,7 +14,6 @@ ATTR_ERROR_MESSAGES = "errorMessages"
 
 # --------------------------------------------------------------------------------------------
 class Util:
-
     # Tolerance (kWh) between the index-implied energy of the most recent daily reading
     # (end_index_m3 - start_index_m3) * converter_factor and its independently-reported
     # energy_kwh. GRDF's own metering noise stays under ~10 kWh/day (observed max 9.75 kWh
@@ -26,7 +25,7 @@ class Util:
 
     # ----------------------------------
     @staticmethod
-    def toState(pygazparData: dict[str, list[dict[str, Any]]]) -> Union[float, None]:
+    def toState(pygazparData: dict[str, list[dict[str, Any]]]) -> float | None:
         """Compute the cumulative energy state from the daily readings.
 
         Walks backward from the most recent day while start_index_m3 == end_index_m3
@@ -50,7 +49,6 @@ class Util:
         res = None
 
         if len(pygazparData) > 0:
-
             dailyData = pygazparData.get(Frequency.DAILY.value)
 
             if dailyData is not None and len(dailyData) > 0:

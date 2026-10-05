@@ -4,8 +4,9 @@ import asyncio
 import json
 import logging
 import traceback
+from collections.abc import Callable
 from datetime import datetime, timedelta
-from typing import Any, Callable
+from typing import Any
 
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
@@ -74,7 +75,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 
 
 # --------------------------------------------------------------------------------------------
-async def async_setup_platform(hass, config, add_entities, discovery_info=None):  # pylint: disable=unused-argument
+async def async_setup_platform(hass, config, add_entities, discovery_info=None):  # noqa: ARG001
     """Configure the platform and add the Gazpar sensor."""
 
     _LOGGER.debug("Initializing Gazpar platform...")
@@ -180,7 +181,7 @@ class GazparAccount:
             elif self._datasource == "excel":
                 client = Client(ExcelWebDataSource(self._username, self._password, self._tmpdir))
             else:
-                raise Exception(  # pylint: disable=broad-exception-raised
+                raise Exception(
                     f"Invalid datasource value: '{self._datasource}' (valid values are: json | excel | test)"
                 )
 
@@ -192,11 +193,11 @@ class GazparAccount:
             _LOGGER.debug(f"data={json.dumps(self._dataByFrequency, indent=2)}")
 
             _LOGGER.debug("New data have been retrieved successfully from PyGazpar library")
-        except Exception as exception:  # pylint: disable=broad-exception-caught
+        except Exception as exception:
             # The data of the previous successful query is kept: a transient GRDF failure must not blank the sensor.
             errorMessage = "Failed to query PyGazpar library. The exception has been raised: {0}"
             self._errorMessages.append(errorMessage.format(str(exception)[:MAX_ERROR_MESSAGE_LENGTH]))
-            _LOGGER.error(errorMessage.format(traceback.format_exc()))  # pylint: disable=logging-format-interpolation
+            _LOGGER.error(errorMessage.format(traceback.format_exc()))
             if event_time is None:
                 raise
 
@@ -299,7 +300,6 @@ class GazparSensor(SensorEntity):
 
         _LOGGER.debug("HA requests its data to be updated...")
         try:
-
             # PyGazpar delivers data sorted by ascending dates.
             # Below, we reverse the order. We want most recent at the top.
             # And we select a subset of the readings by frequency.
@@ -318,7 +318,7 @@ class GazparSensor(SensorEntity):
             if state is not None:
                 self._attr_native_value = state
 
-        except Exception:  # pylint: disable=broad-exception-caught
+        except Exception:  # noqa: BLE001
             _LOGGER.error(f"Failed to update HA data. The exception has been raised: {traceback.format_exc()}")
 
     async def async_will_remove_from_hass(self) -> None:
@@ -355,11 +355,9 @@ class GazparSensor(SensorEntity):
 
         index = 0
         for reading in data:
-
             weekDate = GazparSensor.__getIsoCalendar(reading["time_period"])
 
             if index < GazparSensor.MAX_WEEKLY_READINGS / 2:
-
                 weekDate = (weekDate.weekday, weekDate.week, weekDate.year - 1)
 
                 previousYearWeekDate.append(weekDate)

@@ -56,7 +56,7 @@ async def setup_entities(config: dict, hass=None) -> list[GazparSensor]:
 
     entities: list[GazparSensor] = []
 
-    def add_entities(newEntities, update_before_add=False):  # pylint: disable=unused-argument
+    def add_entities(newEntities, _update_before_add=False):
         entities.extend(newEntities)
 
     await async_setup_platform(hass, config, add_entities)
@@ -128,7 +128,7 @@ async def test_toAttribute():
 # ----------------------------------
 def test_toState_low():
 
-    with open("tests/resources/low_daily_data.json", "r", encoding="utf-8") as f:
+    with open("tests/resources/low_daily_data.json", encoding="utf-8") as f:
         data = {Frequency.DAILY.value: json.load(f)}
 
     state = Util.toState(data)
@@ -144,7 +144,7 @@ def test_toState_low():
 # ----------------------------------
 def test_toState_high():
 
-    with open("tests/resources/high_daily_data.json", "r", encoding="utf-8") as f:
+    with open("tests/resources/high_daily_data.json", encoding="utf-8") as f:
         data = {Frequency.DAILY.value: json.load(f)}
 
     state = Util.toState(data)
@@ -157,7 +157,7 @@ def test_toState_high():
 # ----------------------------------
 def test_toState_zero():
 
-    with open("tests/resources/zero_daily_data.json", "r", encoding="utf-8") as f:
+    with open("tests/resources/zero_daily_data.json", encoding="utf-8") as f:
         data = {Frequency.DAILY.value: json.load(f)}
 
     state = Util.toState(data)
@@ -193,7 +193,7 @@ def test_toState_frozen_index_does_not_drift():
     way, so truncating the window must not change the result.
     """
 
-    with open("tests/resources/frozen_index_60days.json", "r", encoding="utf-8") as f:
+    with open("tests/resources/frozen_index_60days.json", encoding="utf-8") as f:
         fullData = json.load(f)
 
     expected = 9080 * 11.19 + sum(r["energy_kwh"] for r in fullData)
@@ -225,7 +225,7 @@ def test_toState_rejects_implausible_most_recent_reading():
     reading.
     """
 
-    with open("tests/resources/corrupted_reading.json", "r", encoding="utf-8") as f:
+    with open("tests/resources/corrupted_reading.json", encoding="utf-8") as f:
         data = json.load(f)
 
     state = Util.toState({Frequency.DAILY.value: data})
@@ -247,7 +247,7 @@ def test_toState_ignores_most_recent_reading_with_missing_start_index():
     the previous, complete reading.
     """
 
-    with open("tests/resources/missing_start_index.json", "r", encoding="utf-8") as f:
+    with open("tests/resources/missing_start_index.json", encoding="utf-8") as f:
         data = json.load(f)
 
     state = Util.toState({Frequency.DAILY.value: data})
@@ -269,7 +269,7 @@ def test_toState_real_grdf_window_matches_ground_truth():
     consumption instead of a multi-thousand kWh spurious jump.
     """
 
-    with open("tests/resources/real_grdf_window_2024_10.json", "r", encoding="utf-8") as f:
+    with open("tests/resources/real_grdf_window_2024_10.json", encoding="utf-8") as f:
         fullData = json.load(f)
 
     # Most recent day in the fixture is 20/10/2024: end_index_m3=6018, coef=11.61
@@ -355,11 +355,11 @@ def make_account(datasource: str) -> GazparAccount:
 def make_failing_client(message: str):
     """Build a stand-in for pygazpar's Client whose query always fails with the given message."""
 
-    class FailingClient:  # pylint: disable=too-few-public-methods
-        def __init__(self, dataSource):  # pylint: disable=unused-argument
+    class FailingClient:
+        def __init__(self, _dataSource):
             pass
 
-        def load_since(self, pceIdentifier, lastNDays):  # pylint: disable=unused-argument
+        def load_since(self, _pceIdentifier, _lastNDays):
             raise RuntimeError(message)
 
     return FailingClient
@@ -463,10 +463,10 @@ async def test_removing_the_sensor_cancels_the_scheduled_queries(monkeypatch):
 
     cancelled = []
 
-    def fake_call_later(hass, delay, action):  # pylint: disable=unused-argument
+    def fake_call_later(_hass, _delay, _action):
         return lambda: cancelled.append("call_later")
 
-    def fake_track_time_interval(hass, action, interval):  # pylint: disable=unused-argument
+    def fake_track_time_interval(_hass, _action, _interval):
         return lambda: cancelled.append("track_time_interval")
 
     monkeypatch.setattr(sensor_module, "async_call_later", fake_call_later)
