@@ -31,92 +31,98 @@ from custom_components.gazpar.util import Util
 # --------------------------------------------------------------------------------------------
 logger = logging.getLogger(__name__)
 
-global_entities: list[GazparSensor] = []
+# The live test needs real GrDF credentials. They are empty on fork PRs, where the test is skipped.
+requires_grdf = pytest.mark.skipif(not os.environ.get("GRDF_USERNAME"), reason="GrDF credentials are not set")
 
 
 # ----------------------------------
-def add_entities(entities: list, flag: bool):  # pylint: disable=unused-argument
-    global_entities.extend(entities)
-
-
-# ----------------------------------
-@pytest.mark.asyncio
-async def test_live():
-
-    config = {
+def make_config(datasource: str, username: str = "user", password: str = "password", pce: str = "0") -> dict:
+    return {
         CONF_NAME: "gazpar",
-        CONF_USERNAME: os.environ["GRDF_USERNAME"],
-        CONF_PASSWORD: os.environ["GRDF_PASSWORD"],
-        CONF_PCE_IDENTIFIER: os.environ["PCE_IDENTIFIER"],
+        CONF_USERNAME: username,
+        CONF_PASSWORD: password,
+        CONF_PCE_IDENTIFIER: pce,
         CONF_WAITTIME: 30,
         CONF_TMPDIR: "./tmp",
         CONF_SCAN_INTERVAL: 600,
         CONF_LAST_N_DAYS: 30,
-        CONF_DATASOURCE: "json",
+        CONF_DATASOURCE: datasource,
     }
 
-    await async_setup_platform(None, config, add_entities)
 
-    for entity in global_entities:
-        entity.update()
-        state = entity.state
-        attributes = entity.extra_state_attributes
+# ----------------------------------
+async def setup_entities(config: dict, hass=None) -> list[GazparSensor]:
+    """Set up the platform and return the entities it adds, so that each test owns its entities."""
 
-        logger.debug(f"state={state}")
-        logger.debug(f"attributes={json.dumps(attributes, indent=2)}")
+    entities: list[GazparSensor] = []
+
+    def add_entities(newEntities, update_before_add=False):  # pylint: disable=unused-argument
+        entities.extend(newEntities)
+
+    await async_setup_platform(hass, config, add_entities)
+    return entities
+
+
+# ----------------------------------
+@pytest.mark.asyncio
+@requires_grdf
+async def test_live():
+
+    config = make_config("json", os.environ["GRDF_USERNAME"], os.environ["GRDF_PASSWORD"], os.environ["PCE_IDENTIFIER"])
+
+    entities = await setup_entities(config)
+
+    assert len(entities) == 1
+    entity = entities[0]
+    entity.update()
+    attributes = entity.extra_state_attributes
+
+    assert entity.native_value is not None
+    assert Frequency.DAILY.value in attributes
+
+    logger.debug(f"state={entity.native_value}")
+    logger.debug(f"attributes={json.dumps(attributes, indent=2)}")
 
 
 # ----------------------------------
 @pytest.mark.asyncio
 async def test_sample():
 
-    config = {
-        CONF_NAME: "gazpar",
-        CONF_USERNAME: os.environ["GRDF_USERNAME"],
-        CONF_PASSWORD: os.environ["GRDF_PASSWORD"],
-        CONF_PCE_IDENTIFIER: os.environ["PCE_IDENTIFIER"],
-        CONF_WAITTIME: 30,
-        CONF_TMPDIR: "./tmp",
-        CONF_SCAN_INTERVAL: 600,
-        CONF_LAST_N_DAYS: 30,
-        CONF_DATASOURCE: "test",
-    }
+    entities = await setup_entities(make_config("test"))
 
-    await async_setup_platform(None, config, add_entities)
+    assert len(entities) == 1
+    entity = entities[0]
+    entity.update()
+    attributes = entity.extra_state_attributes
 
-    for entity in global_entities:
-        entity.update()
-        state = entity.state
-        attributes = entity.extra_state_attributes
+    assert isinstance(entity.native_value, float)
+    assert len(attributes[Frequency.DAILY.value]) <= GazparSensor.MAX_DAILY_READINGS
 
-        logger.debug(f"state={state}")
-        logger.debug(f"attributes={json.dumps(attributes, indent=2)}")
+    logger.debug(f"state={entity.native_value}")
+    logger.debug(f"attributes={json.dumps(attributes, indent=2)}")
 
 
 # ----------------------------------
 @pytest.mark.asyncio
 async def test_toAttribute():
 
-    config = {
-        CONF_NAME: "gazpar",
-        CONF_USERNAME: os.environ["GRDF_USERNAME"],
-        CONF_PASSWORD: os.environ["GRDF_PASSWORD"],
-        CONF_PCE_IDENTIFIER: os.environ["PCE_IDENTIFIER"],
-        CONF_WAITTIME: 30,
-        CONF_TMPDIR: "./tmp",
-        CONF_SCAN_INTERVAL: 600,
-        CONF_LAST_N_DAYS: 30,
-        CONF_DATASOURCE: "test",
-    }
+    config = make_config("test")
 
-    await async_setup_platform(None, config, add_entities)
+    entities = await setup_entities(config)
+    assert len(entities) == 1
+    entity = entities[0]
+    entity.update()
 
-    for entity in global_entities:
-        entity.update()
+    attributes = Util.toAttributes(config[CONF_PCE_IDENTIFIER], "1.0.0", entity.dataByFrequency, [])
 
-        attributes = Util.toAttributes(config[CONF_PCE_IDENTIFIER], "1.0.0", entity.dataByFrequency, [])
+    assert attributes["pce"] == config[CONF_PCE_IDENTIFIER]
+    assert attributes["version"] == "1.0.0"
+    assert attributes["errorMessages"] == []
+    assert "username" not in attributes
+    for frequency in Frequency:
+        assert frequency.value in attributes
 
-        logger.info(f"attributes={json.dumps(attributes, indent=2)}")
+    logger.info(f"attributes={json.dumps(attributes, indent=2)}")
 
 
 # ----------------------------------
@@ -448,3 +454,28 @@ async def test_native_value_keeps_last_known_state_when_readings_have_a_gap():
 
     assert Util.toState({Frequency.DAILY.value: gapReadings[::-1]}) is None
     assert sensor.native_value == lastKnownState
+
+
+# ----------------------------------
+@pytest.mark.asyncio
+async def test_removing_the_sensor_cancels_the_scheduled_queries(monkeypatch):
+    """A removed sensor must not keep querying GrDF, otherwise each YAML reload adds another timer."""
+
+    cancelled = []
+
+    def fake_call_later(hass, delay, action):  # pylint: disable=unused-argument
+        return lambda: cancelled.append("call_later")
+
+    def fake_track_time_interval(hass, action, interval):  # pylint: disable=unused-argument
+        return lambda: cancelled.append("track_time_interval")
+
+    monkeypatch.setattr(sensor_module, "async_call_later", fake_call_later)
+    monkeypatch.setattr(sensor_module, "async_track_time_interval", fake_track_time_interval)
+
+    entities = await setup_entities(make_config("test"), hass=object())
+    assert len(entities) == 1
+    assert cancelled == []
+
+    await entities[0].async_will_remove_from_hass()
+
+    assert cancelled == ["call_later", "track_time_interval"]

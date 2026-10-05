@@ -5,7 +5,7 @@ import json
 import logging
 import traceback
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, Callable
 
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
@@ -116,13 +116,13 @@ async def async_setup_platform(hass, config, add_entities, discovery_info=None):
         add_entities(account.sensors, True)
 
         if hass is not None:
-            async_call_later(hass, 5, account.async_update_gazpar_data)
-            async_track_time_interval(hass, account.async_update_gazpar_data, scan_interval)
+            account.track(async_call_later(hass, 5, account.async_update_gazpar_data))
+            account.track(async_track_time_interval(hass, account.async_update_gazpar_data, scan_interval))
         else:
             await account.async_update_gazpar_data(None)
 
         _LOGGER.debug("Gazpar platform initialization has completed successfully")
-    except BaseException:
+    except Exception:
         _LOGGER.error("Gazpar platform initialization has failed with exception : %s", traceback.format_exc())
         raise
 
@@ -159,6 +159,7 @@ class GazparAccount:
         self._dataByFrequency: dict[str, list[dict[str, Any]]] = {}
         self.sensors: list[GazparSensor] = []
         self._errorMessages: list[str] = []
+        self._unsubscribers: list[Callable[[], None]] = []
 
         self.sensors.append(GazparSensor(name, PropertyName.ENERGY.value, UnitOfEnergy.KILO_WATT_HOUR, self))
 
@@ -191,7 +192,7 @@ class GazparAccount:
             _LOGGER.debug(f"data={json.dumps(self._dataByFrequency, indent=2)}")
 
             _LOGGER.debug("New data have been retrieved successfully from PyGazpar library")
-        except BaseException as exception:  # pylint: disable=broad-exception-caught
+        except Exception as exception:  # pylint: disable=broad-exception-caught
             # The data of the previous successful query is kept: a transient GRDF failure must not blank the sensor.
             errorMessage = "Failed to query PyGazpar library. The exception has been raised: {0}"
             self._errorMessages.append(errorMessage.format(str(exception)[:MAX_ERROR_MESSAGE_LENGTH]))
@@ -203,6 +204,18 @@ class GazparAccount:
             for sensor in self.sensors:
                 sensor.schedule_update_ha_state(True)
             _LOGGER.debug("HA notified that new data are available")
+
+    # ----------------------------------
+    def track(self, unsubscribe: Callable[[], None]):
+        """Keep the function that cancels a scheduled query, so that stop() can cancel it."""
+        self._unsubscribers.append(unsubscribe)
+
+    # ----------------------------------
+    def stop(self):
+        """Cancel the scheduled queries."""
+        for unsubscribe in self._unsubscribers:
+            unsubscribe()
+        self._unsubscribers.clear()
 
     # ----------------------------------
     @property
@@ -305,8 +318,12 @@ class GazparSensor(SensorEntity):
             if state is not None:
                 self._attr_native_value = state
 
-        except BaseException:  # pylint: disable=broad-exception-caught
+        except Exception:  # pylint: disable=broad-exception-caught
             _LOGGER.error(f"Failed to update HA data. The exception has been raised: {traceback.format_exc()}")
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Stop the scheduled queries when the sensor is removed, e.g. on a YAML reload."""
+        self._account.stop()
 
     MAX_DAILY_READINGS = 14
     MAX_WEEKLY_READINGS = 20
