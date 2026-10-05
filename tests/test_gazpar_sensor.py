@@ -70,6 +70,7 @@ def make_account(config: dict) -> GazparAccount:
 # ----------------------------------
 @pytest.mark.asyncio
 @requires_grdf
+@pytest.mark.usefixtures("grdf_network")
 async def test_live():
 
     account = make_account(
