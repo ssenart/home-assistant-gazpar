@@ -1,0 +1,35 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "GrDF Gazpar",
+        "description": "Enter your GrDF account and the identifier of your gas meter (PCE).",
+        "data": {
+          "name": "Name",
+          "username": "Username",
+          "password": "Password",
+          "pce_identifier": "PCE identifier"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "GrDF refused the username or the password.",
+      "cannot_connect": "Cannot reach GrDF. Try again later.",
+      "unknown_pce": "This PCE identifier does not belong to the account."
+    },
+    "abort": {
+      "already_configured": "This gas meter is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "GrDF Gazpar options",
+        "data": {
+          "scan_interval": "Update interval (seconds)",
+          "lastNDays": "Days of history to download"
+        }
+      }
+    }
+  }
+}

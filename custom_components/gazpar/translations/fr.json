@@ -1,0 +1,35 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "GrDF Gazpar",
+        "description": "Saisissez votre compte GrDF et l'identifiant de votre compteur de gaz (PCE).",
+        "data": {
+          "name": "Nom",
+          "username": "Identifiant",
+          "password": "Mot de passe",
+          "pce_identifier": "Identifiant PCE"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "GrDF a refusé l'identifiant ou le mot de passe.",
+      "cannot_connect": "Impossible de joindre GrDF. Réessayez plus tard.",
+      "unknown_pce": "Cet identifiant PCE n'appartient pas au compte."
+    },
+    "abort": {
+      "already_configured": "Ce compteur de gaz est déjà configuré."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options GrDF Gazpar",
+        "data": {
+          "scan_interval": "Intervalle de mise à jour (secondes)",
+          "lastNDays": "Nombre de jours d'historique à télécharger"
+        }
+      }
+    }
+  }
+}

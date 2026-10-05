@@ -9,22 +9,30 @@ from homeassistant.components.sensor import (
     SensorEntity,
     SensorStateClass,
 )
+from homeassistant.const import CONF_NAME, CONF_PASSWORD, CONF_SCAN_INTERVAL, CONF_USERNAME
+from pygazpar.api_client import ServerError  # type: ignore
 from pygazpar.enum import Frequency  # type: ignore
 
 import custom_components.gazpar.sensor as sensor_module
-from custom_components.gazpar.sensor import (
+from custom_components.gazpar.config_flow import (
+    CannotConnect,
+    InvalidAuth,
+    UnknownPce,
+    check_account,
+    entry_data_from_user,
+)
+from custom_components.gazpar.const import (
     CONF_DATASOURCE,
     CONF_LAST_N_DAYS,
-    CONF_NAME,
-    CONF_PASSWORD,
     CONF_PCE_IDENTIFIER,
-    CONF_SCAN_INTERVAL,
     CONF_TMPDIR,
-    CONF_USERNAME,
     CONF_WAITTIME,
+)
+from custom_components.gazpar.sensor import (
     GazparAccount,
     GazparSensor,
-    async_setup_platform,
+    account_from_entry_data,
+    entry_data_from_yaml,
 )
 from custom_components.gazpar.util import Util
 
@@ -37,6 +45,8 @@ requires_grdf = pytest.mark.skipif(not os.environ.get("GRDF_USERNAME"), reason="
 
 # ----------------------------------
 def make_config(datasource: str, username: str = "user", password: str = "password", pce: str = "0") -> dict:
+    """A YAML configuration, as Home Assistant validates it."""
+
     return {
         CONF_NAME: "gazpar",
         CONF_USERNAME: username,
@@ -51,16 +61,10 @@ def make_config(datasource: str, username: str = "user", password: str = "passwo
 
 
 # ----------------------------------
-async def setup_entities(config: dict, hass=None) -> list[GazparSensor]:
-    """Set up the platform and return the entities it adds, so that each test owns its entities."""
+def make_account(config: dict) -> GazparAccount:
+    """The account a config entry creates from the same configuration."""
 
-    entities: list[GazparSensor] = []
-
-    def add_entities(newEntities, _update_before_add=False):
-        entities.extend(newEntities)
-
-    await async_setup_platform(hass, config, add_entities)
-    return entities
+    return account_from_entry_data(entry_data_from_yaml(config), "1.0.0")
 
 
 # ----------------------------------
@@ -68,12 +72,12 @@ async def setup_entities(config: dict, hass=None) -> list[GazparSensor]:
 @requires_grdf
 async def test_live():
 
-    config = make_config("json", os.environ["GRDF_USERNAME"], os.environ["GRDF_PASSWORD"], os.environ["PCE_IDENTIFIER"])
+    account = make_account(
+        make_config("json", os.environ["GRDF_USERNAME"], os.environ["GRDF_PASSWORD"], os.environ["PCE_IDENTIFIER"])
+    )
+    await account.async_update_gazpar_data(None)
 
-    entities = await setup_entities(config)
-
-    assert len(entities) == 1
-    entity = entities[0]
+    entity = account.sensors[0]
     entity.update()
     attributes = entity.extra_state_attributes
 
@@ -88,10 +92,10 @@ async def test_live():
 @pytest.mark.asyncio
 async def test_sample():
 
-    entities = await setup_entities(make_config("test"))
+    account = make_account(make_config("test"))
+    await account.async_update_gazpar_data(None)
 
-    assert len(entities) == 1
-    entity = entities[0]
+    entity = account.sensors[0]
     entity.update()
     attributes = entity.extra_state_attributes
 
@@ -107,10 +111,10 @@ async def test_sample():
 async def test_toAttribute():
 
     config = make_config("test")
+    account = make_account(config)
+    await account.async_update_gazpar_data(None)
 
-    entities = await setup_entities(config)
-    assert len(entities) == 1
-    entity = entities[0]
+    entity = account.sensors[0]
     entity.update()
 
     attributes = Util.toAttributes(config[CONF_PCE_IDENTIFIER], "1.0.0", entity.dataByFrequency, [])
@@ -347,11 +351,6 @@ def test_toState_no_daily_data_is_unknown():
 
 
 # ----------------------------------
-def make_account(datasource: str) -> GazparAccount:
-    return GazparAccount("gazpar", "user", "password", "0", 30, "/tmp", timedelta(hours=4), 1095, "1.0.0", datasource)
-
-
-# ----------------------------------
 def make_failing_client(message: str):
     """Build a stand-in for pygazpar's Client whose query always fails with the given message."""
 
@@ -373,7 +372,7 @@ async def test_failed_query_keeps_last_good_data(monkeypatch):
     The error message is also cut short so a large response body cannot grow the attributes.
     """
 
-    account = make_account("test")
+    account = make_account(make_config("test"))
     await account.async_update_gazpar_data(None)
     sensor = account.sensors[0]
     sensor.update()
@@ -395,7 +394,7 @@ async def test_failed_query_keeps_last_good_data(monkeypatch):
 async def test_attributes_stay_under_recorder_limit():
     """Home Assistant stores no attributes at all once they exceed 16384 bytes, so the budget must hold."""
 
-    account = make_account("test")
+    account = make_account(make_config("test"))
     await account.async_update_gazpar_data(None)
     # Hourly readings shaped like the daily ones, so their size is realistic. Far more than the cap are supplied.
     dailyReading = account.dataByFrequency[Frequency.DAILY.value][0]
@@ -425,7 +424,7 @@ async def test_attributes_stay_under_recorder_limit():
 
 # ----------------------------------
 def test_sensor_entity_declares_energy_metadata():
-    sensor = make_account("test").sensors[0]
+    sensor = make_account(make_config("test")).sensors[0]
 
     assert isinstance(sensor, SensorEntity)
     assert sensor.device_class == SensorDeviceClass.ENERGY
@@ -439,7 +438,7 @@ def test_sensor_entity_declares_energy_metadata():
 async def test_native_value_keeps_last_known_state_when_readings_have_a_gap():
     """A gap in the index data leaves the sensor on its last known state instead of unknown."""
 
-    account = make_account("test")
+    account = make_account(make_config("test"))
     await account.async_update_gazpar_data(None)
     sensor = account.sensors[0]
     sensor.update()
@@ -457,25 +456,90 @@ async def test_native_value_keeps_last_known_state_when_readings_have_a_gap():
 
 
 # ----------------------------------
-@pytest.mark.asyncio
-async def test_removing_the_sensor_cancels_the_scheduled_queries(monkeypatch):
-    """A removed sensor must not keep querying GrDF, otherwise each YAML reload adds another timer."""
+def test_stop_cancels_the_scheduled_queries():
+    """Unloading an account must cancel its scheduled queries, otherwise each reload adds another timer."""
 
+    account = make_account(make_config("test"))
     cancelled = []
+    account.track(lambda: cancelled.append("call_later"))
+    account.track(lambda: cancelled.append("track_time_interval"))
 
-    def fake_call_later(_hass, _delay, _action):
-        return lambda: cancelled.append("call_later")
-
-    def fake_track_time_interval(_hass, _action, _interval):
-        return lambda: cancelled.append("track_time_interval")
-
-    monkeypatch.setattr(sensor_module, "async_call_later", fake_call_later)
-    monkeypatch.setattr(sensor_module, "async_track_time_interval", fake_track_time_interval)
-
-    entities = await setup_entities(make_config("test"), hass=object())
-    assert len(entities) == 1
-    assert cancelled == []
-
-    await entities[0].async_will_remove_from_hass()
+    account.stop()
+    account.stop()
 
     assert cancelled == ["call_later", "track_time_interval"]
+
+
+# ----------------------------------
+def test_entry_data_from_yaml_keeps_the_scan_interval_in_seconds():
+
+    config = make_config("test")
+    config[CONF_SCAN_INTERVAL] = timedelta(hours=8)
+
+    data = entry_data_from_yaml(config)
+
+    assert data[CONF_SCAN_INTERVAL] == 28800
+    assert data[CONF_PCE_IDENTIFIER] == "0"
+    assert data[CONF_LAST_N_DAYS] == 30
+
+
+# ----------------------------------
+def test_entry_data_from_user_adds_the_defaults_of_the_yaml_configuration():
+    data = entry_data_from_user({CONF_NAME: "gazpar", CONF_USERNAME: "u", CONF_PASSWORD: "p", CONF_PCE_IDENTIFIER: "1"})
+
+    assert data[CONF_SCAN_INTERVAL] == 14400
+    assert data[CONF_LAST_N_DAYS] == 1095
+    assert data[CONF_DATASOURCE] == "json"
+    assert data[CONF_PCE_IDENTIFIER] == "1"
+
+
+# ----------------------------------
+class FakeClient:
+    """Stands in for the pygazpar client used by the config flow."""
+
+    def __init__(self, pce_identifiers=None, error=None):
+        self._pce_identifiers = pce_identifiers
+        self._error = error
+
+    def __call__(self, _datasource):
+        return self
+
+    def get_pce_identifiers(self):
+        if self._error is not None:
+            raise self._error
+        return self._pce_identifiers
+
+
+def test_check_account_accepts_a_pce_of_the_account(monkeypatch):
+    monkeypatch.setattr("custom_components.gazpar.config_flow.Client", FakeClient(["1", "2"]))
+
+    check_account("u", "p", "2")
+
+
+def test_check_account_rejects_a_pce_outside_the_account(monkeypatch):
+    monkeypatch.setattr("custom_components.gazpar.config_flow.Client", FakeClient(["1"]))
+
+    with pytest.raises(UnknownPce):
+        check_account("u", "p", "2")
+
+
+def test_check_account_reports_refused_credentials(monkeypatch):
+    monkeypatch.setattr("custom_components.gazpar.config_flow.Client", FakeClient(error=ServerError("refused", 400)))
+
+    with pytest.raises(InvalidAuth):
+        check_account("u", "wrong", "1")
+
+
+def test_check_account_reports_an_unreachable_grdf(monkeypatch):
+    monkeypatch.setattr("custom_components.gazpar.config_flow.Client", FakeClient(error=ConnectionError("down")))
+
+    with pytest.raises(CannotConnect):
+        check_account("u", "p", "1")
+
+
+def test_sensor_is_identified_by_its_pce_and_grouped_in_a_device():
+    sensor = make_account(make_config("test", pce="22423299474865")).sensors[0]
+
+    assert sensor.unique_id == "22423299474865"
+    assert sensor.device_info["identifiers"] == {("gazpar", "22423299474865")}
+    assert sensor.name == "gazpar"

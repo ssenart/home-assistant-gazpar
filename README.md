@@ -40,6 +40,16 @@ Copy the gazpar directory in HA config/custom_components/gazpar directory.
 
 ## Configuration
 
+### Set up from the Home Assistant UI
+
+Go to Settings > Devices & services > Add integration, search for "GrDF Gazpar", then enter your GrDF username, your password, the identifier of your gas meter (PCE) and a name for the sensor. The account is checked against GrDF before it is saved.
+
+The options (update interval and number of days downloaded) can be changed later from the integration's Configure button. The sensor is named after the name you chose, so `sensor.gazpar` for the default name.
+
+### YAML configuration (still supported)
+
+Existing YAML configurations keep working without any change. When Home Assistant starts, the YAML configuration is imported into the UI, and the sensor is then managed by that entry. While the YAML configuration is there, it updates the entry of the same meter, so its values take precedence over the options set in the UI. You can remove the YAML configuration once you are happy with the UI setup; the entry stays.
+
 Add to your Home Assistant configuration.yaml:
 
 ```yaml

@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- A GrDF account can be set up from the Home Assistant UI, with a config flow and an options flow for the update interval and the number of days downloaded. The YAML configuration keeps working: it is imported into the UI, and it updates the entry of the same meter while it is there.
+- The sensor has a unique ID per meter and belongs to a device.
+
 ### Changed
 
 - Python 3.14.2 or newer is now required for development, and CI runs on Python 3.14.

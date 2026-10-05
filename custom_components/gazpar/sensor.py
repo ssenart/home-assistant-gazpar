@@ -16,6 +16,7 @@ from homeassistant.components.sensor import (
     SensorEntity,
     SensorStateClass,
 )
+from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.const import (
     CONF_NAME,
     CONF_PASSWORD,
@@ -23,6 +24,9 @@ from homeassistant.const import (
     CONF_USERNAME,
     UnitOfEnergy,
 )
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.event import async_call_later, async_track_time_interval
 from pygazpar.client import Client  # type: ignore
 from pygazpar.datasource import (  # type: ignore
@@ -32,23 +36,23 @@ from pygazpar.datasource import (  # type: ignore
 )
 from pygazpar.enum import Frequency, PropertyName  # type: ignore
 
+from custom_components.gazpar.const import (
+    CONF_DATASOURCE,
+    CONF_LAST_N_DAYS,
+    CONF_PCE_IDENTIFIER,
+    CONF_TMPDIR,
+    CONF_WAITTIME,
+    DEFAULT_DATASOURCE,
+    DEFAULT_LAST_N_DAYS,
+    DEFAULT_NAME,
+    DEFAULT_SCAN_INTERVAL,
+    DEFAULT_WAITTIME,
+    DOMAIN,
+)
 from custom_components.gazpar.manifest import Manifest
 from custom_components.gazpar.util import Util
 
 _LOGGER = logging.getLogger(__name__)
-
-CONF_PCE_IDENTIFIER = "pce_identifier"
-CONF_WAITTIME = "wait_time"
-CONF_TMPDIR = "tmpdir"
-CONF_LAST_N_DAYS = "lastNDays"
-CONF_DATASOURCE = "datasource"
-
-DEFAULT_SCAN_INTERVAL = timedelta(hours=4)
-DEFAULT_WAITTIME = 30
-DEFAULT_LAST_N_DAYS = 1095
-DEFAULT_DATASOURCE = "json"
-
-DEFAULT_NAME = "gazpar"
 
 LAST_INDEX = -1
 
@@ -75,57 +79,63 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 
 
 # --------------------------------------------------------------------------------------------
-async def async_setup_platform(hass, config, add_entities, discovery_info=None):  # noqa: ARG001
-    """Configure the platform and add the Gazpar sensor."""
+def entry_data_from_yaml(config: dict[str, Any]) -> dict[str, Any]:
+    """The entry data of a YAML configuration: the same keys as the UI, with the interval in seconds."""
 
-    _LOGGER.debug("Initializing Gazpar platform...")
+    scan_interval = config[CONF_SCAN_INTERVAL]
+    if isinstance(scan_interval, timedelta):
+        scan_interval = scan_interval.total_seconds()
+
+    return {
+        CONF_NAME: config[CONF_NAME],
+        CONF_USERNAME: config[CONF_USERNAME],
+        CONF_PASSWORD: config[CONF_PASSWORD],
+        CONF_PCE_IDENTIFIER: config[CONF_PCE_IDENTIFIER],
+        CONF_WAITTIME: config[CONF_WAITTIME],
+        CONF_TMPDIR: config[CONF_TMPDIR],
+        CONF_DATASOURCE: config[CONF_DATASOURCE],
+        CONF_SCAN_INTERVAL: int(scan_interval),
+        CONF_LAST_N_DAYS: config[CONF_LAST_N_DAYS],
+    }
+
+
+# --------------------------------------------------------------------------------------------
+async def async_setup_platform(hass: HomeAssistant, config, add_entities, discovery_info=None):  # noqa: ARG001
+    """Import the YAML configuration into a config entry, so that existing setups keep working.
+
+    The config entry creates the sensor, so the YAML platform adds no entity of its own.
+    """
+
+    _LOGGER.debug("Importing the Gazpar YAML configuration")
 
     try:
-        name = config[CONF_NAME]
-        _LOGGER.debug(f"name={name}")
-
-        username = config[CONF_USERNAME]
-        _LOGGER.debug(f"username={username}")
-
-        password = config[CONF_PASSWORD]
-        _LOGGER.debug("password=*********")
-
-        pceIdentifier = config[CONF_PCE_IDENTIFIER]
-        _LOGGER.debug(f"pce_identifier={pceIdentifier}")
-
-        wait_time = config[CONF_WAITTIME]
-        _LOGGER.debug(f"wait_time={wait_time}")
-
-        tmpdir = config[CONF_TMPDIR]
-        _LOGGER.debug(f"tmpdir={tmpdir}")
-
-        datasource = config[CONF_DATASOURCE]
-        _LOGGER.debug(f"datasource={datasource}")
-
-        scan_interval = config[CONF_SCAN_INTERVAL]
-        _LOGGER.debug(f"scan_interval={scan_interval}")
-
-        lastNDays = config[CONF_LAST_N_DAYS]
-        _LOGGER.debug(f"lastNDays={lastNDays}")
-
-        version = await Manifest.version()
-        _LOGGER.debug(f"version={version}")
-
-        account = GazparAccount(
-            name, username, password, pceIdentifier, wait_time, tmpdir, scan_interval, lastNDays, version, datasource
+        hass.async_create_task(
+            hass.config_entries.flow.async_init(
+                DOMAIN, context={"source": SOURCE_IMPORT}, data=entry_data_from_yaml(config)
+            )
         )
-        add_entities(account.sensors, True)
-
-        if hass is not None:
-            account.track(async_call_later(hass, 5, account.async_update_gazpar_data))
-            account.track(async_track_time_interval(hass, account.async_update_gazpar_data, scan_interval))
-        else:
-            await account.async_update_gazpar_data(None)
-
-        _LOGGER.debug("Gazpar platform initialization has completed successfully")
-    except Exception:
-        _LOGGER.error("Gazpar platform initialization has failed with exception : %s", traceback.format_exc())
+    except Exception:  # noqa: BLE001
+        _LOGGER.error("Gazpar YAML configuration import has failed with exception : %s", traceback.format_exc())
         raise
+
+
+# --------------------------------------------------------------------------------------------
+async def async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddConfigEntryEntitiesCallback
+) -> None:
+    """Create the sensor of a config entry and schedule its queries."""
+
+    data = {**entry.data, **entry.options}
+    version = await Manifest.version()
+    account = account_from_entry_data(data, version)
+    async_add_entities(account.sensors, True)
+
+    scan_interval = timedelta(seconds=data[CONF_SCAN_INTERVAL])
+    account.track(async_call_later(hass, 5, account.async_update_gazpar_data))
+    account.track(async_track_time_interval(hass, account.async_update_gazpar_data, scan_interval))
+    entry.async_on_unload(account.stop)
+
+    _LOGGER.debug("Gazpar platform initialization has completed successfully")
 
 
 # --------------------------------------------------------------------------------------------
@@ -203,7 +213,7 @@ class GazparAccount:
 
         if event_time is not None:
             for sensor in self.sensors:
-                sensor.schedule_update_ha_state(True)
+                sensor.async_schedule_update_ha_state(True)
             _LOGGER.debug("HA notified that new data are available")
 
     # ----------------------------------
@@ -250,6 +260,24 @@ class GazparAccount:
 
 
 # --------------------------------------------------------------------------------------------
+def account_from_entry_data(data: dict[str, Any], version: str) -> GazparAccount:
+    """Build the account from the entry data."""
+
+    return GazparAccount(
+        data[CONF_NAME],
+        data[CONF_USERNAME],
+        data[CONF_PASSWORD],
+        data[CONF_PCE_IDENTIFIER],
+        data[CONF_WAITTIME],
+        data[CONF_TMPDIR],
+        timedelta(seconds=data[CONF_SCAN_INTERVAL]),
+        data[CONF_LAST_N_DAYS],
+        version,
+        data[CONF_DATASOURCE],
+    )
+
+
+# --------------------------------------------------------------------------------------------
 class GazparSensor(SensorEntity):
     """Representation of a sensor entity for Gazpar."""
 
@@ -267,6 +295,13 @@ class GazparSensor(SensorEntity):
         self._identifier = identifier
         self._attr_native_unit_of_measurement = unit
         self._account = account
+        self._attr_unique_id = account.pceIdentifier
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, account.pceIdentifier)},
+            manufacturer="GrDF",
+            model="Gas meter",
+            name=name,
+        )
         self._dataByFrequency: dict[str, list[dict[str, Any]]] = {}
         self._selectByFrequence = {
             Frequency.HOURLY: GazparSensor.__selectHourly,
@@ -320,10 +355,6 @@ class GazparSensor(SensorEntity):
 
         except Exception:  # noqa: BLE001
             _LOGGER.error(f"Failed to update HA data. The exception has been raised: {traceback.format_exc()}")
-
-    async def async_will_remove_from_hass(self) -> None:
-        """Stop the scheduled queries when the sensor is removed, e.g. on a YAML reload."""
-        self._account.stop()
 
     MAX_DAILY_READINGS = 14
     MAX_WEEKLY_READINGS = 20
