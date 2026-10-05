@@ -3860,14 +3860,14 @@ typing-extensions = ">=4.14.1"
 
 [[package]]
 name = "pygazpar"
-version = "1.4.0a3"
+version = "1.4.0a4"
 description = "Python library to download gas consumption from a GrDF (French Gas Company) account"
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "pygazpar-1.4.0a3-py3-none-any.whl", hash = "sha256:e307175e4b0f40057317b99fd0d1ed2a6611429aaa90b7a0471a0322fe0f2dc7"},
-    {file = "pygazpar-1.4.0a3.tar.gz", hash = "sha256:aa46d1b86fdb5afe82a05e7746102e6e7edbc486ff08ecc6387d69b803310267"},
+    {file = "pygazpar-1.4.0a4-py3-none-any.whl", hash = "sha256:22cf6d56dd23396242961e95bec9e9e33c8f963bdad346d55561ed60720f783f"},
+    {file = "pygazpar-1.4.0a4.tar.gz", hash = "sha256:b52ecd6939c8464244fb7623cb7209437b04b8fc7ece39459aa5b4658d9b0ea9"},
 ]
 
 [package.dependencies]
