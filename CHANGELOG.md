@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.15a2] - 2026-10-05
+
 ### Added
 
 - A GrDF account can be set up from the Home Assistant UI, with a config flow and an options flow for the update interval and the number of days downloaded. The YAML configuration keeps working: it is imported into the UI, and it updates the entry of the same meter while it is there.
@@ -188,5 +190,6 @@ Anonymize the README.
 ### Added
 - Add HACS support.
 
-[Unreleased]: https://github.com/ssenart/home-assistant-gazpar/compare/1.3.15a1...HEAD
+[Unreleased]: https://github.com/ssenart/home-assistant-gazpar/compare/1.3.15a2...HEAD
+[1.3.15a2]: https://github.com/ssenart/home-assistant-gazpar/compare/1.3.15a1...1.3.15a2
 [1.3.15a1]: https://github.com/ssenart/home-assistant-gazpar/compare/1.3.14...1.3.15a1
