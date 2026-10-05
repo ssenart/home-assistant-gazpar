@@ -10,6 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Python 3.14.2 or newer is now required for development, and CI runs on Python 3.14.
 - Development dependency: Home Assistant `^2026.9.0`.
+- The sensor is now a `SensorEntity`: its device class, state class and unit are entity properties rather than attributes. The attributes Home Assistant derives from them are unchanged, and the sensor is pushed by each query instead of being polled.
+
+### Removed
+
+- The GRDF username is no longer exposed in the `sensor.gazpar` attributes, so it is no longer stored in the Home Assistant database.
+
+### Fixed
+
+- A daily reading with a missing index or converter factor no longer raises an error when computing the state: the last known state is kept and a warning is logged. A most recent reading without a converter factor falls back to the previous day, as one without an index already did.
+- A failed GRDF query no longer blanks the sensor: the data of the last successful query is kept, and the error is still reported in the `errorMessages` attribute.
+- The `hourly` attribute keeps only the most recent reading and error messages are cut to 500 characters, so the attributes stay under the 16 KB limit Home Assistant enforces.
 
 ### Security
 

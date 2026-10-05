@@ -1,29 +1,9 @@
 import logging
 from typing import Any, Union
 
-from homeassistant.components.sensor.const import (
-    ATTR_STATE_CLASS,
-    SensorDeviceClass,
-    SensorStateClass,
-)
-from homeassistant.const import (
-    ATTR_ATTRIBUTION,
-    ATTR_DEVICE_CLASS,
-    ATTR_FRIENDLY_NAME,
-    ATTR_ICON,
-    ATTR_UNIT_OF_MEASUREMENT,
-    CONF_USERNAME,
-    UnitOfEnergy,
-)
 from pygazpar.enum import Frequency, PropertyName  # type: ignore
 
 _LOGGER = logging.getLogger(__name__)
-
-HA_ATTRIBUTION = "Data provided by GrDF"
-
-ICON_GAS = "mdi:fire"
-
-SENSOR_FRIENDLY_NAME = "Gazpar"
 
 LAST_INDEX = -1
 
@@ -62,7 +42,7 @@ class Util:
         incident (a single bad reading inflated the state by ~52840 kWh, although the
         official GRDF export shows a normal, continuous index for that day). If the
         index-implied energy for that record disagrees with its own reported energy_kwh
-        by more than LAST_READING_ENERGY_EPSILON_KWH, or if its index is simply missing,
+        by more than LAST_READING_ENERGY_EPSILON_KWH, or if its index or converter factor is missing,
         it is dropped and the walk proceeds from the previous (already-published) day
         instead -- older records are never second-guessed this way.
         """
@@ -71,7 +51,7 @@ class Util:
 
         if len(pygazparData) > 0:
 
-            dailyData = pygazparData[Frequency.DAILY.value]
+            dailyData = pygazparData.get(Frequency.DAILY.value)
 
             if dailyData is not None and len(dailyData) > 0:
                 dailyData = Util._dropImplausibleMostRecentReading(dailyData)
@@ -104,17 +84,17 @@ class Util:
                 endIndex = dailyData[currentIndex][PropertyName.END_INDEX.value]
                 converterFactorStr = dailyData[currentIndex][PropertyName.CONVERTER_FACTOR.value]
 
-                if endIndex is not None:
-                    volumeEndIndex = float(endIndex)
-                else:
-                    raise ValueError("End index is missing in the daily data.")
+                # The walk stops on a reading with a missing index, or the anchor itself may lack its
+                # converter factor. Without them the state cannot be computed: report it as unknown
+                # rather than publishing a wrong value or raising from the state property.
+                if endIndex is None or converterFactorStr is None:
+                    _LOGGER.warning(
+                        "Cumulative energy state is unknown, index or converter factor missing in reading: %s",
+                        dailyData[currentIndex],
+                    )
+                    return None
 
-                if converterFactorStr is not None:
-                    converterFactor = float(converterFactorStr)
-                else:
-                    raise ValueError("Converter factor is missing in the daily data.")
-
-                res = volumeEndIndex * converterFactor + cumulativeEnergy
+                res = float(endIndex) * float(converterFactorStr) + cumulativeEnergy
 
         return res
 
@@ -140,10 +120,13 @@ class Util:
         converterFactorStr = mostRecent[PropertyName.CONVERTER_FACTOR.value]
         energyRaw = mostRecent[PropertyName.ENERGY.value]
 
-        if converterFactorStr is None or energyRaw is None:
-            # Can't cross-check consistency without both figures -- let the existing
-            # algorithm handle this record as before (it will raise if it lands on it
-            # with a missing converter factor).
+        if converterFactorStr is None:
+            # The converter factor turns the index into kWh, so this record cannot be used.
+            _LOGGER.debug("Ignoring most recent daily reading, missing converter factor: %s", mostRecent)
+            return dailyData[1:]
+
+        if energyRaw is None:
+            # Can't cross-check consistency without the reported energy -- keep the record as before.
             return dailyData
 
         impliedEnergy = (float(endIndexRaw) - float(startIndexRaw)) * float(converterFactorStr)
@@ -167,23 +150,16 @@ class Util:
     # ----------------------------------
     @staticmethod
     def toAttributes(
-        username: str,
         pceIdentifier: str,
         version: str,
         pygazparData: dict[str, list[dict[str, Any]]],
         errorMessages: list[str],
     ) -> dict[str, Any]:
 
+        # Unit, device class, state class, icon and attribution come from the SensorEntity itself.
         res = {
-            ATTR_ATTRIBUTION: HA_ATTRIBUTION,
             ATTR_VERSION: version,
-            CONF_USERNAME: username,
             ATTR_PCE: pceIdentifier,
-            ATTR_UNIT_OF_MEASUREMENT: UnitOfEnergy.KILO_WATT_HOUR,
-            ATTR_FRIENDLY_NAME: SENSOR_FRIENDLY_NAME,
-            ATTR_ICON: ICON_GAS,
-            ATTR_DEVICE_CLASS: SensorDeviceClass.ENERGY,
-            ATTR_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
             ATTR_ERROR_MESSAGES: errorMessages,
             str(Frequency.HOURLY): list[dict[str, Any]](),
             str(Frequency.DAILY): list[dict[str, Any]](),

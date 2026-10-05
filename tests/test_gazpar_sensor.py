@@ -1,10 +1,17 @@
 import json
 import logging
 import os
+from datetime import timedelta
 
 import pytest
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntity,
+    SensorStateClass,
+)
 from pygazpar.enum import Frequency  # type: ignore
 
+import custom_components.gazpar.sensor as sensor_module
 from custom_components.gazpar.sensor import (
     CONF_DATASOURCE,
     CONF_LAST_N_DAYS,
@@ -15,6 +22,7 @@ from custom_components.gazpar.sensor import (
     CONF_TMPDIR,
     CONF_USERNAME,
     CONF_WAITTIME,
+    GazparAccount,
     GazparSensor,
     async_setup_platform,
 )
@@ -106,9 +114,7 @@ async def test_toAttribute():
     for entity in global_entities:
         entity.update()
 
-        attributes = Util.toAttributes(
-            config[CONF_USERNAME], config[CONF_PCE_IDENTIFIER], "1.0.0", entity.dataByFrequency, []
-        )
+        attributes = Util.toAttributes(config[CONF_PCE_IDENTIFIER], "1.0.0", entity.dataByFrequency, [])
 
         logger.info(f"attributes={json.dumps(attributes, indent=2)}")
 
@@ -279,3 +285,166 @@ def test_toState_real_grdf_window_matches_ground_truth():
     assert delta < 20.0
 
     logger.info(f"state_full={state_full} state_1014={state_1014} state_1013={state_1013} delta={delta}")
+
+
+# ----------------------------------
+def record(start, end, energy=0.0, converter=11.0):
+    return {
+        "time_period": "01/01/2024",
+        "start_index_m3": start,
+        "end_index_m3": end,
+        "energy_kwh": energy,
+        "converter_factor_kwh/m3": converter,
+    }
+
+
+# ----------------------------------
+def test_toState_index_gap_in_flat_run_is_unknown():
+    """A flat most recent day followed by a day with no index: the anchor day cannot be found."""
+
+    data = [record(10, 10, 0.5), record(None, None, 1.0), record(9, 10, 11.0)]
+
+    assert Util.toState({Frequency.DAILY.value: data}) is None
+
+
+# ----------------------------------
+def test_toState_all_days_missing_index_is_unknown():
+
+    data = [record(None, None), record(None, None)]
+
+    assert Util.toState({Frequency.DAILY.value: data}) is None
+
+
+# ----------------------------------
+def test_toState_anchor_missing_converter_factor_is_unknown():
+    """The anchor day (first non-flat day) has no converter factor."""
+
+    data = [record(10, 10, 0.5), record(9, 10, 11.0, converter=None)]
+
+    assert Util.toState({Frequency.DAILY.value: data}) is None
+
+
+# ----------------------------------
+def test_toState_most_recent_missing_converter_factor_falls_back_to_previous_day():
+    """Like a missing index, a most recent reading without its converter factor is not finalized."""
+
+    data = [record(10, 11, 11.0, converter=None), record(9, 10, 11.0)]
+
+    assert Util.toState({Frequency.DAILY.value: data}) == 10 * 11.0
+
+
+# ----------------------------------
+def test_toState_no_daily_data_is_unknown():
+
+    assert Util.toState({}) is None
+    assert Util.toState({Frequency.DAILY.value: []}) is None
+
+
+# ----------------------------------
+def make_account(datasource: str) -> GazparAccount:
+    return GazparAccount("gazpar", "user", "password", "0", 30, "/tmp", timedelta(hours=4), 1095, "1.0.0", datasource)
+
+
+# ----------------------------------
+def make_failing_client(message: str):
+    """Build a stand-in for pygazpar's Client whose query always fails with the given message."""
+
+    class FailingClient:  # pylint: disable=too-few-public-methods
+        def __init__(self, dataSource):  # pylint: disable=unused-argument
+            pass
+
+        def load_since(self, pceIdentifier, lastNDays):  # pylint: disable=unused-argument
+            raise RuntimeError(message)
+
+    return FailingClient
+
+
+# ----------------------------------
+@pytest.mark.asyncio
+async def test_failed_query_keeps_last_good_data(monkeypatch):
+    """A transient GRDF failure keeps the data of the last successful query and reports the error.
+
+    The error message is also cut short so a large response body cannot grow the attributes.
+    """
+
+    account = make_account("test")
+    await account.async_update_gazpar_data(None)
+    sensor = account.sensors[0]
+    sensor.update()
+    stateBefore = sensor.state
+    assert stateBefore is not None
+
+    monkeypatch.setattr(sensor_module, "Client", make_failing_client("x" * 10000))
+    with pytest.raises(RuntimeError):
+        await account.async_update_gazpar_data(None)
+
+    sensor.update()
+    assert sensor.state == stateBefore
+    assert len(account.errorMessages) == 1
+    assert len(account.errorMessages[0]) < 600
+
+
+# ----------------------------------
+@pytest.mark.asyncio
+async def test_attributes_stay_under_recorder_limit():
+    """Home Assistant stores no attributes at all once they exceed 16384 bytes, so the budget must hold."""
+
+    account = make_account("test")
+    await account.async_update_gazpar_data(None)
+    # Hourly readings shaped like the daily ones, so their size is realistic. Far more than the cap are supplied.
+    dailyReading = account.dataByFrequency[Frequency.DAILY.value][0]
+    account.dataByFrequency[Frequency.HOURLY.value] = [
+        {**dailyReading, "frequency": Frequency.HOURLY.value, "time_period": f"{i:02d}/05/2019 13:00"}
+        for i in range(500)
+    ]
+    sensor = account.sensors[0]
+    sensor.update()
+
+    attributes = sensor.extra_state_attributes
+
+    assert len(attributes[Frequency.HOURLY.value]) == GazparSensor.MAX_HOURLY_READINGS
+    assert "username" not in attributes
+    # Home Assistant adds these from the entity itself, so they count towards the limit too.
+    entityAttributes = {
+        "unit_of_measurement": "kWh",
+        "device_class": "energy",
+        "state_class": "total_increasing",
+        "friendly_name": "gazpar",
+        "icon": "mdi:fire",
+        "attribution": "Data provided by GrDF",
+    }
+    encoded = json.dumps({**attributes, **entityAttributes}, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    assert len(encoded) < 16384
+
+
+# ----------------------------------
+def test_sensor_entity_declares_energy_metadata():
+    sensor = make_account("test").sensors[0]
+
+    assert isinstance(sensor, SensorEntity)
+    assert sensor.device_class == SensorDeviceClass.ENERGY
+    assert sensor.state_class == SensorStateClass.TOTAL_INCREASING
+    assert sensor.native_unit_of_measurement == "kWh"
+    assert sensor.should_poll is False
+
+
+# ----------------------------------
+@pytest.mark.asyncio
+async def test_native_value_keeps_last_known_state_when_readings_have_a_gap():
+    """A gap in the index data leaves the sensor on its last known state instead of unknown."""
+
+    account = make_account("test")
+    await account.async_update_gazpar_data(None)
+    sensor = account.sensors[0]
+    sensor.update()
+    lastKnownState = sensor.native_value
+    assert lastKnownState is not None
+
+    # A flat run of days followed by a day without an index: no state can be computed from these readings.
+    # The account stores readings oldest first, the sensor reverses them.
+    gapReadings = [record(9, 10, 11.0), record(None, None, 1.0), record(10, 10, 0.5)]
+    account.dataByFrequency[Frequency.DAILY.value] = gapReadings
+    sensor.update()
+
+    assert Util.toState({Frequency.DAILY.value: gapReadings[::-1]}) is None
+    assert sensor.native_value == lastKnownState

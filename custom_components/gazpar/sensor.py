@@ -9,7 +9,12 @@ from typing import Any
 
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
-from homeassistant.components.sensor import PLATFORM_SCHEMA
+from homeassistant.components.sensor import (
+    PLATFORM_SCHEMA,
+    SensorDeviceClass,
+    SensorEntity,
+    SensorStateClass,
+)
 from homeassistant.const import (
     CONF_NAME,
     CONF_PASSWORD,
@@ -17,7 +22,6 @@ from homeassistant.const import (
     CONF_USERNAME,
     UnitOfEnergy,
 )
-from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.event import async_call_later, async_track_time_interval
 from pygazpar.client import Client  # type: ignore
 from pygazpar.datasource import (  # type: ignore
@@ -46,6 +50,11 @@ DEFAULT_DATASOURCE = "json"
 DEFAULT_NAME = "gazpar"
 
 LAST_INDEX = -1
+
+# Keeps the sensor attributes well under the 16 KB limit Home Assistant enforces on state attributes.
+MAX_ERROR_MESSAGE_LENGTH = 500
+
+HA_ATTRIBUTION = "Data provided by GrDF"
 
 ICON_GAS = "mdi:fire"
 
@@ -183,9 +192,9 @@ class GazparAccount:
 
             _LOGGER.debug("New data have been retrieved successfully from PyGazpar library")
         except BaseException as exception:  # pylint: disable=broad-exception-caught
-            self._dataByFrequency = {}
+            # The data of the previous successful query is kept: a transient GRDF failure must not blank the sensor.
             errorMessage = "Failed to query PyGazpar library. The exception has been raised: {0}"
-            self._errorMessages.append(errorMessage.format(str(exception)))
+            self._errorMessages.append(errorMessage.format(str(exception)[:MAX_ERROR_MESSAGE_LENGTH]))
             _LOGGER.error(errorMessage.format(traceback.format_exc()))  # pylint: disable=logging-format-interpolation
             if event_time is None:
                 raise
@@ -194,12 +203,6 @@ class GazparAccount:
             for sensor in self.sensors:
                 sensor.schedule_update_ha_state(True)
             _LOGGER.debug("HA notified that new data are available")
-
-    # ----------------------------------
-    @property
-    def username(self):
-        """Return the username."""
-        return self._username
 
     # ----------------------------------
     @property
@@ -233,15 +236,22 @@ class GazparAccount:
 
 
 # --------------------------------------------------------------------------------------------
-class GazparSensor(Entity):
-    """Representation of a sensor entity for Linky."""
+class GazparSensor(SensorEntity):
+    """Representation of a sensor entity for Gazpar."""
+
+    _attr_device_class = SensorDeviceClass.ENERGY
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _attr_attribution = HA_ATTRIBUTION
+    _attr_icon = ICON_GAS
+    # GazparAccount pushes the new data after each query, so Home Assistant must not poll the sensor.
+    _attr_should_poll = False
 
     # ----------------------------------
     def __init__(self, name, identifier, unit, account: GazparAccount):
         """Initialize the sensor."""
-        self._name = name
+        self._attr_name = name
         self._identifier = identifier
-        self._unit = unit
+        self._attr_native_unit_of_measurement = unit
         self._account = account
         self._dataByFrequency: dict[str, list[dict[str, Any]]] = {}
         self._selectByFrequence = {
@@ -260,35 +270,10 @@ class GazparSensor(Entity):
 
     # ----------------------------------
     @property
-    def name(self):
-        """Return the name of the sensor."""
-        return self._name
-
-    # ----------------------------------
-    @property
-    def state(self):
-        """Return the state of the sensor."""
-
-        return Util.toState(self._dataByFrequency)
-
-    @property
-    def unit_of_measurement(self):
-        """Return the unit of measurement."""
-        return self._unit
-
-    # ----------------------------------
-    @property
-    def icon(self):
-        """Return the icon of the sensor."""
-        return ICON_GAS
-
-    # ----------------------------------
-    @property
     def extra_state_attributes(self):
         """Return the state attributes of the sensor."""
 
         return Util.toAttributes(
-            self._account.username,
             self._account.pceIdentifier,
             self._account.version,
             self._dataByFrequency,
@@ -315,6 +300,11 @@ class GazparSensor(Entity):
                     self._dataByFrequency[frequency.value] = []
                     _LOGGER.debug(f"No {frequency} data available yet for update")
 
+            # When the readings cannot give a state (e.g. a gap in the index data), the last known state is kept.
+            state = Util.toState(self._dataByFrequency)
+            if state is not None:
+                self._attr_native_value = state
+
         except BaseException:  # pylint: disable=broad-exception-caught
             _LOGGER.error(f"Failed to update HA data. The exception has been raised: {traceback.format_exc()}")
 
@@ -322,13 +312,16 @@ class GazparSensor(Entity):
     MAX_WEEKLY_READINGS = 20
     MAX_MONTHLY_READINGS = 24
     MAX_YEARLY_READINGS = 5
+    # The other lists fill about 14.9 KB of the 16 KB attribute limit, and one hourly reading adds about 300 bytes.
+    # GRDF does not publish hourly gas readings, so only the most recent one is kept.
+    MAX_HOURLY_READINGS = 1
 
     DATE_FORMAT = "%d/%m/%Y"
 
     # ----------------------------------
     @staticmethod
     def __selectHourly(data: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        return data
+        return data[: GazparSensor.MAX_HOURLY_READINGS]
 
     # ----------------------------------
     @staticmethod

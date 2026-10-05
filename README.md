@@ -2,9 +2,9 @@
 
 GrDF Gazpar integration permits to integrate in Home Assistant all your gas consumption data.
 
-From version 1.2.0, it is compatible with [Lovelace Garpar Card](https://github.com/ssenart/lovelace-gazpar-card).
+From version 1.2.0, it is compatible with [Lovelace Gazpar Card](https://github.com/ssenart/lovelace-gazpar-card).
 
-![Lovelace Garpar Card](images/gazpar-card.png)
+![Lovelace Gazpar Card](images/gazpar-card.png)
 
 GrDF Gazpar custom component is using [PyGazpar](https://github.com/ssenart/PyGazpar) library to retrieve GrDF data.
 
@@ -12,11 +12,11 @@ GrDF Gazpar custom component is using [PyGazpar](https://github.com/ssenart/PyGa
 
 home-assistant-gazpar integration is using Home Assistant API and may be broken from a HA release to another.
 
-An good alternative is using MQTT integration with the [Gazpar2MQTT](https://github.com/ssenart/gazpar2mqtt) application.
+A good alternative is using MQTT integration with the [Gazpar2MQTT](https://github.com/ssenart/gazpar2mqtt) application.
 
 [Gazpar2MQTT](https://github.com/ssenart/gazpar2mqtt) has been developed recently for a better loose coupling with HA.
 
-[Gazpar2MQTT](https://github.com/ssenart/gazpar2mqtt) is also compatible with [Lovelace Garpar Card](https://github.com/ssenart/lovelace-gazpar-card).
+[Gazpar2MQTT](https://github.com/ssenart/gazpar2mqtt) is also compatible with [Lovelace Gazpar Card](https://github.com/ssenart/lovelace-gazpar-card).
 
 ## Installation
 
@@ -54,9 +54,15 @@ sensor:
   lastNDays: 365
 ```
 
-'name' is the sensor name (only available from version 1.3.5-alpha.1). Its default value is 'gazpar'.
+Options:
 
-'lastNDays' is the number of days of data to download from GrDF (only available from version 1.3.9). Its default value is 1095 (3 years).
+- `name`: the sensor name (only available from version 1.3.5-alpha.1). Default: `gazpar`.
+- `username` and `password`: your GrDF account credentials.
+- `pce_identifier`: the identifier of your meter (PCE).
+- `tmpdir`: required. The folder where the Excel files from GrDF are stored, used only with `datasource: 'excel'`.
+- `datasource`: `json` (default), `excel`, or `test` (sample data, no connection to GrDF).
+- `scan_interval`: how often GrDF is queried. Default: `04:00:00`.
+- `lastNDays`: the number of days of data to download from GrDF (only available from version 1.3.9). Default: 1095 (3 years).
 
 If you have the error: 
 ```
@@ -66,7 +72,7 @@ An error occurred while loading data. Status code: 500 - {"code":500,"message":"
 
 Do not use special characters in your password.
 
-Ensure that tmpdir already exists before starting HA. It is used to store the downloaded Excel files from GrDF.
+Ensure that tmpdir already exists before starting HA.
 
 If using multiple accounts, you can specify them with the following syntax:
 
@@ -89,15 +95,16 @@ sensor:
   scan_interval: '08:00:00'  
 ```
 
-Restart your HA application. In HA development panel, you should see the new Gazpar entity 'sensor.gazpar' with its corresponding attributes:
+Restart your HA application. In HA development panel, you should see the new Gazpar entity 'sensor.gazpar' with its corresponding attributes. Its state is the cumulative energy in kWh, computed from the index readings. If the readings do not allow a state to be computed, for example because of a gap in the index data, the sensor keeps its last known state and logs a warning.
+
+The attributes below keep the most recent readings: at most 14 daily, 20 weekly, 24 monthly, 5 yearly and 1 hourly.
 
 - sensor.gazpar:
 ```yaml
 attribution: Data provided by GrDF
-username: titi.toto@tata.fr
 pce: 123456789
 unit_of_measurement: kWh
-friendly_name: Gazpar
+friendly_name: gazpar
 icon: mdi:fire
 device_class: energy
 state_class: total_increasing
@@ -178,27 +185,21 @@ In Home Assistant energy configuration panel, you can set directly the sensor 's
 
 I prefer using an alias for all my sensors so I keep control on the sensor naming. For that, I define a template and use the template sensor.gas_energy to configure the dashboard.
 
-```yaml
-- sensor:
-  - name: gas_energy
-    unit_of_measurement: 'kWh'      
-    state: >
-      {{ states('sensor.gazpar') }}
-    icon: mdi:fire
-    device_class: energy
-    state_class: total_increasing
-```
-
-For those who prefer to use the volume data instead of the energy (kWh) data, the following template can also be used:
+For those who prefer to use the volume data instead of the energy (kWh) data, the template sensor.gas_volume can also be used. Both sensors are defined under the same `template:` key:
 
 ```yaml
-- sensor:
-  - name: gas_volume
-    unit_of_measurement: 'm³'
-    state: >
-      {{ state_attr('sensor.gazpar', 'daily')[0]['start_index_m3'] + state_attr('sensor.gazpar', 'daily')[0]['volume_
-m3']}}
-    icon: mdi:fire
-    device_class: gas
-    state_class: total_increasing
+template:
+  - sensor:
+      - name: gas_energy
+        unit_of_measurement: 'kWh'
+        state: "{{ states('sensor.gazpar') }}"
+        icon: mdi:fire
+        device_class: energy
+        state_class: total_increasing
+      - name: gas_volume
+        unit_of_measurement: 'm³'
+        state: "{{ state_attr('sensor.gazpar', 'daily')[0]['start_index_m3'] + state_attr('sensor.gazpar', 'daily')[0]['volume_m3'] }}"
+        icon: mdi:fire
+        device_class: gas
+        state_class: total_increasing
 ```
