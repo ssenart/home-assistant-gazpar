@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Python 3.14.2 or newer is now required for development, and CI runs on Python 3.14.
 - Development dependency: Home Assistant `^2026.9.0`.
+- Development dependencies: `pytest-homeassistant-custom-component` `0.13.367` runs the config flow tests in a Home Assistant instance; pytest `^9.0.3`, pytest-asyncio `1.4.0` and httpcore `1.0.9` (the version that imports on Python 3.14.7).
 - Development tooling: ruff (lint and format) and mypy replace flake8, isort, black and pylint. Ruff and mypy are updated to their latest stable versions, and the CI lint and test steps are inlined in the workflow.
 - The sensor is now a `SensorEntity`: its device class, state class and unit are entity properties rather than attributes. The attributes Home Assistant derives from them are unchanged, and the sensor is pushed by each query instead of being polled.
 
