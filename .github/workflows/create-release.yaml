@@ -35,7 +35,6 @@ jobs:
       contents: read
       actions: read # Read the CI status of the commit
     outputs:
-      environment: ${{ steps.checks.outputs.environment }}
       is_prerelease: ${{ steps.checks.outputs.is_prerelease }}
       last_tag: ${{ steps.checks.outputs.last_tag }}
     steps:
@@ -93,23 +92,18 @@ jobs:
 
           kind = version.pre[0] if version.pre else None  # "a", "b", "rc" or None for a final version
 
-          # Channel rules: which version kind is allowed on which branch, and where it is published
+          # Channel rules: which version kind is allowed on which branch
           if branch == "main":
               if kind is not None:
                   fail("main only accepts final versions (e.g. 0.5.1)")
-              environment = "pypi"
           elif branch == "develop":
               if kind != "a":
                   fail("develop only accepts alpha versions (e.g. 0.5.1a4)")
-              environment = "pypi"
           elif branch.startswith("release/"):
               if kind not in ("b", "rc"):
                   fail("release/* only accepts beta (bN) or release candidate (rcN) versions")
               if version.base_version != branch.removeprefix("release/"):
                   fail(f"Version base {version.base_version} does not match branch {branch}")
-              environment = "pypi"
-          elif branch.startswith("feature/"):
-              environment = "testpypi"
           else:
               fail(f"Releases are not allowed from branch '{branch}'")
 
@@ -135,7 +129,6 @@ jobs:
               fail("The [Unreleased] section of CHANGELOG.md is missing or empty")
 
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
-              output.write(f"environment={environment}\n")
               output.write(f"is_prerelease={'true' if kind else 'false'}\n")
               output.write(f"last_tag={last_tag}\n")
 
@@ -146,7 +139,6 @@ jobs:
               summary.write(f"| Branch | `{branch}` |\n")
               summary.write(f"| Last tag | `{last_tag or '-'}` |\n")
               summary.write(f"| Pre-release | {'yes' if kind else 'no'} |\n")
-              summary.write(f"| Publish target | {environment} |\n")
           EOF
 
       #----------------------------------------------
@@ -169,8 +161,8 @@ jobs:
           exit 1
 
   #----------------------------------------------
-  # Release: bump, finalize the changelog, build, publish, then commit, tag and release.
-  # Everything irreversible (PyPI, DockerHub) runs before the commit and the tag are pushed.
+  # Release: bump, finalize the changelog, then commit, tag and create the GitHub release.
+  # Nothing is published outside GitHub: the integration is installed from its release tag (HACS).
   release:
     name: Release ${{ inputs.version }}
     needs: preflight
@@ -204,7 +196,7 @@ jobs:
           virtualenvs-path: .venv
 
       #----------------------------------------------
-      # Bump version in pyproject.toml, config.yaml and build.yaml
+      # Bump the version in pyproject.toml and in the integration manifest
       - name: Bump version files
         run: |
           poetry version "$VERSION"
