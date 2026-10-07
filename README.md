@@ -185,6 +185,8 @@ It is able to rebuild the full data history and keep it updated.
 
 The dates are now in sync with Home Assistant.
 
+Unlike the legacy method below, it writes directly to Home Assistant's statistics rather than through a regular sensor state, so it isn't affected by the spurious-jump issue described below. Note that it publishes a statistics-only identifier with no backing entity (by design — see the [Gazpar2HAWS FAQ](https://github.com/ssenart/gazpar2haws/blob/main/docs/FAQ.md#can-i-use-these-entities-in-the-energy-dashboard)), so Home Assistant will warn "Entity not defined" when you add it as the Energy dashboard's gas source — that warning is expected and safe to ignore; the FAQ explains why and how to make it disappear entirely if you want to keep using this integration's own `sensor.gazpar` entity (e.g. for [lovelace-gazpar-card](https://github.com/ssenart/lovelace-gazpar-card)) alongside it.
+
 ### Legacy method
 
 You probably want to integrate GrDF data into the Home Assistant Energy module.
@@ -192,6 +194,10 @@ You probably want to integrate GrDF data into the Home Assistant Energy module.
 ![Dashboard](images/energy_module.png)
 
 In Home Assistant energy configuration panel, you can set directly the sensor 'sensor.gazpar' in the gas consumption section.
+
+⚠️ **Known issue (fixed in 1.3.14, [#86](https://github.com/ssenart/home-assistant-gazpar/pull/86)):** before this version, a corrupted or not-yet-finalized GrDF daily reading could make the sensor's cumulative state jump by thousands to tens of thousands of kWh in a single update. Home Assistant's Energy dashboard reads from its own permanent long-term statistics (built by the recorder from deltas between successive sensor states), not from this integration's live data — so upgrading to 1.3.14+ prevents *new* jumps, but it does **not** retroactively repair statistics that already recorded a bad jump. If your Energy dashboard shows an implausible spike for a specific month while other data sources (e.g. the sensor's own attributes, or [lovelace-gazpar-card](https://github.com/ssenart/lovelace-gazpar-card)) look correct, this is almost certainly the cause. To fix it:
+- Correct the affected months directly via **Developer tools → Statistics** (Home Assistant flags suspect entries) or the `recorder.adjust_sum_statistics` service, or
+- Switch to [Gazpar2HAWS](#gazpar2haws) above, which rebuilds the full history cleanly and isn't exposed to this failure mode.
 
 I prefer using an alias for all my sensors so I keep control on the sensor naming. For that, I define a template and use the template sensor.gas_energy to configure the dashboard.
 
