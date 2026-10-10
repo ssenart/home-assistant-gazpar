@@ -188,18 +188,16 @@ jobs:
           python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
 
       #----------------------------------------------
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.3.0
         with:
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-          virtualenvs-path: .venv
+          python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
 
       #----------------------------------------------
-      # Bump the version in pyproject.toml and in the integration manifest
+      # Bump the version in pyproject.toml and uv.lock, and in the integration manifest
       - name: Bump version files
         run: |
-          poetry version "$VERSION"
+          uv version "$VERSION" --no-sync
           jq --arg v "$VERSION" '.version = $v' custom_components/gazpar/manifest.json > manifest.tmp
           mv manifest.tmp custom_components/gazpar/manifest.json
 
@@ -261,7 +259,7 @@ jobs:
         run: |
           git config --global user.name github-actions
           git config --global user.email github-actions@github.com
-          git add pyproject.toml CHANGELOG.md custom_components/gazpar/manifest.json
+          git add pyproject.toml uv.lock CHANGELOG.md custom_components/gazpar/manifest.json
           git commit --allow-empty -m "Bump version to $VERSION"
 
       - name: Tag and push
