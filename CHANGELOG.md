@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.15a3] - 2026-10-10
+
 ### Changed
 
 - Upgraded the PyGazpar library to `1.4.0a5`. It no longer depends on `pandas`, so `pandas` and the packages it needed are no longer installed.
@@ -195,6 +197,7 @@ Anonymize the README.
 ### Added
 - Add HACS support.
 
-[Unreleased]: https://github.com/ssenart/home-assistant-gazpar/compare/1.3.15a2...HEAD
+[Unreleased]: https://github.com/ssenart/home-assistant-gazpar/compare/1.3.15a3...HEAD
+[1.3.15a3]: https://github.com/ssenart/home-assistant-gazpar/compare/1.3.15a2...1.3.15a3
 [1.3.15a2]: https://github.com/ssenart/home-assistant-gazpar/compare/1.3.15a1...1.3.15a2
 [1.3.15a1]: https://github.com/ssenart/home-assistant-gazpar/compare/1.3.14...1.3.15a1
