@@ -13,7 +13,7 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
-    "pygazpar>=1.4.0a4",
+    "pygazpar>=1.4.0a5",
 ]
 
 [dependency-groups]

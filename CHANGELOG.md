@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Upgraded the PyGazpar library to `1.4.0a5`. It no longer depends on `pandas`, so `pandas` and the packages it needed are no longer installed.
 - Development tooling: [uv](https://docs.astral.sh/uv/) replaces Poetry. The development tools and Home Assistant are a `dev` dependency group in `pyproject.toml` (the project is not built as a package), and the locked versions are in `uv.lock` (`poetry.lock` is removed). To work on the integration, run `uv sync` instead of `poetry install`. The CI and release workflows use uv. The integration is unchanged.
 
 ## [1.3.15a2] - 2026-10-05
