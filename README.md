@@ -6,7 +6,7 @@ From version 1.2.0, it is compatible with [Lovelace Gazpar Card](https://github.
 
 ![Lovelace Gazpar Card](images/gazpar-card.png)
 
-GrDF Gazpar custom component is using [PyGazpar](https://github.com/ssenart/PyGazpar) library to retrieve GrDF data.
+GrDF Gazpar custom component is using [PyGazpar](https://github.com/ssenart/pygazpar) library to retrieve GrDF data.
 
 ## Alternative integration using MQTT
 
