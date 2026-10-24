@@ -13,7 +13,7 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
-    "pygazpar>=1.4.0a5",
+    "pygazpar>=1.4.0a7",
 ]
 
 [dependency-groups]
@@ -31,6 +31,8 @@ dev = [
 required-version = ">=0.13.0"
 # A Home Assistant custom component is not installed as a package: it is copied into the configuration directory.
 package = false
+# homeassistant pins uv==0.12.5, older than the uv this project requires; uv is only a tool here, so override the pin.
+override-dependencies = ["uv>=0.13.0"]
 
 [tool.mypy]
 exclude = [ ".venv" ]
