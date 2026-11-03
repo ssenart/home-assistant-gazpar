@@ -1119,7 +1119,7 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "pygazpar", specifier = ">=1.4.0a7" }]
+requires-dist = [{ name = "pygazpar", specifier = ">=1.4.0" }]
 
 [package.metadata.requires-dev]
 dev = [
@@ -1882,7 +1882,7 @@ wheels = [
 
 [[package]]
 name = "pygazpar"
-version = "1.4.0a7"
+version = "1.4.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "openpyxl" },
@@ -1890,9 +1890,9 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e3/74/9e07477bdf55abed35f904cc827614013cbcd42f9db88bf26ba5d82b6e33/pygazpar-1.4.0a7.tar.gz", hash = "sha256:bde3868fe70b90946f74f9daab16aa8264f04dd3440a8d94ff1dc24e45141637", size = 67788, upload-time = "2026-10-20T21:38:21.071Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/9e/2c/b010d3e6139a4dc3656132a168aca11c71685b4d8d65086765226c2b448f/pygazpar-1.4.0.tar.gz", hash = "sha256:4fcf50d0bb210434a4cad5a8d1005984a6b32b39fda2f61ab7c1404ba7c913ea", size = 69341, upload-time = "2026-11-03T21:46:16.84Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/fb/5f/431cd561cfcfc17ae18b6c363bb6162f255c618dd1330d117f49037be5f4/pygazpar-1.4.0a7-py3-none-any.whl", hash = "sha256:1b807d2538d4a3a194bfe56457ac31ab5ecd8d72deb6675368df5760e193c649", size = 59078, upload-time = "2026-10-20T21:38:19.499Z" },
+    { url = "https://files.pythonhosted.org/packages/41/f5/ac94a53f0b3475931977eba81b7e2fefd192b17d79d61f8523b8bebc0a41/pygazpar-1.4.0-py3-none-any.whl", hash = "sha256:f4bbd4767508a1631c2d6989697effb0884e33b0c8ae2a8ddc2d136967947682", size = 59227, upload-time = "2026-11-03T21:46:15.356Z" },
 ]
 
 [[package]]
