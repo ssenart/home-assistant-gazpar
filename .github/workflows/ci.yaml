@@ -26,8 +26,8 @@ permissions:
   contents: read # Read-only access
 
 env:
-  DEFAULT_PYTHON_VERSION: "3.13"
-  TARGET_PYTHON_VERSIONS: "[ '3.13' ]"
+  DEFAULT_PYTHON_VERSION: "3.14"
+  TARGET_PYTHON_VERSIONS: "[ '3.14' ]"
 
 jobs:
   #----------------------------------------------
@@ -35,7 +35,6 @@ jobs:
   prepare:
     name: Prepare
     outputs:
-      package-version: ${{ steps.compute-version.outputs.pep440-version }}
       target_python_versions: ${{ env.TARGET_PYTHON_VERSIONS }}
       default_python_version: ${{ env.DEFAULT_PYTHON_VERSION }}
     runs-on: ubuntu-latest
@@ -53,16 +52,9 @@ jobs:
           fetch-depth: 0
 
       #----------------------------------------------
-      # Compute the version of the project based in the current checkout branch
-      - name: Compute version
-        id: compute-version
-        uses: ./.github/workflows/compute-version
-
-      #----------------------------------------------
       # Send to Github Actions
       - name: Display information
         run: |
-          echo "package-version=${{ steps.compute-version.outputs.pep440-version }}"
           echo "target-python-versions=${{ env.TARGET_PYTHON_VERSIONS }}"
           echo "default-python-version=${{ env.DEFAULT_PYTHON_VERSION }}"
 
@@ -72,7 +64,7 @@ jobs:
     name: Lint
     needs: prepare
     runs-on: ubuntu-latest
-    if: ${{ !github.event.inputs.skip-lint }}
+    if: ${{ !inputs.skip-lint }}
     steps:
       #----------------------------------------------
       #  Check-out repo
@@ -80,11 +72,39 @@ jobs:
         uses: actions/checkout@v4
 
       #----------------------------------------------
-      # Linting the code
-      - name: Lint
-        uses: ./.github/workflows/python-lint
+      # Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
+
+      #----------------------------------------------
+      # Install uv, which uses the Python set up above
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.3.0
+        with:
+          python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
+          enable-cache: true
+
+      #----------------------------------------------
+      # Install project
+      - name: Install project
+        run: uv sync --locked
+
+      #----------------------------------------------
+      # Check the formatting
+      - name: Ruff format
+        run: uv run --locked ruff format --check .
+
+      #----------------------------------------------
+      # Lint the code
+      - name: Ruff check
+        run: uv run --locked ruff check .
+
+      #----------------------------------------------
+      # Check the types
+      - name: Mypy
+        run: uv run --locked mypy .
 
   #----------------------------------------------
   # Test
@@ -92,7 +112,7 @@ jobs:
     name: Test
     needs: [prepare, lint]
     runs-on: "ubuntu-latest"
-    if: ${{ !github.event.inputs.skip-tests }}
+    if: ${{ !inputs.skip-tests }}
     strategy:
       fail-fast: true
       matrix:
@@ -104,11 +124,29 @@ jobs:
         uses: actions/checkout@v4
 
       #----------------------------------------------
-      # Testing the code
-      - name: Test
-        uses: ./.github/workflows/python-test
+      # Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+
+      #----------------------------------------------
+      # Install uv, which uses the Python set up above
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.3.0
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+
+      #----------------------------------------------
+      # Install project
+      - name: Install project
+        run: uv sync --locked
+
+      #----------------------------------------------
+      # Run the tests
+      - name: Test with pytest
+        run: uv run --locked pytest tests
         env:
           GRDF_USERNAME: ${{ secrets.GRDF_USERNAME }}
           GRDF_PASSWORD: ${{ secrets.GRDF_PASSWORD }}

@@ -4,6 +4,98 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Breaking
+
+- Requires Home Assistant 2026.9.0 or newer.
+- The `username` attribute is removed from `sensor.gazpar`. Templates or automations that read it must be updated.
+- Python 3.14.2 or newer is required for development.
+
+### Added
+
+- A GrDF account can be set up from the Home Assistant UI, with a config flow and an options flow for the update interval and the number of days downloaded. The YAML configuration keeps working: it is imported into the UI, and it updates the entry of the same meter while it is there.
+- The sensor has a unique ID per meter and belongs to a device.
+
+### Changed
+
+- Upgraded the PyGazpar library to `1.4.0`. Requires `pygazpar>=1.4.0`. PyGazpar no longer depends on `pandas`, and it adds `pydantic`.
+- The sensor is now a `SensorEntity`: its device class, state class and unit are entity properties rather than attributes. The attributes Home Assistant derives from them are unchanged, and the sensor is pushed by each query instead of being polled.
+- Development tooling: [uv](https://docs.astral.sh/uv/) replaces Poetry (`poetry.lock` is replaced by `uv.lock`), and ruff and mypy replace flake8, isort, black and pylint. The CI and release workflows use uv. The integration is unchanged.
+- Release process: the create-release workflow takes an explicit version, checks it against the branch, the existing tags and the changelog, and finalizes the changelog. GitHub releases are drafts by default, and a dry run option validates a release without pushing or publishing it.
+
+### Fixed
+
+- A daily reading with a missing index or converter factor no longer raises an error when computing the state: the last known state is kept and a warning is logged. A most recent reading without a converter factor falls back to the previous day, as one without an index already did.
+- A failed GrDF query no longer blanks the sensor: the data of the last successful query is kept, and the error is still reported in the `errorMessages` attribute.
+- The `hourly` attribute keeps only the most recent reading and error messages are cut to 500 characters, so the attributes stay under the 16 KB limit Home Assistant enforces.
+
+### Removed
+
+- GitVersion, its configuration and the version step in CI.
+- The `wait_time` option of the YAML configuration. It was stored but never used: remove it from `configuration.yaml`, as Home Assistant rejects unknown options.
+
+### Security
+
+- Locked dependencies updated to fix open Dependabot alerts: aiohttp, Pillow, PyJWT, urllib3, cryptography, anyio, idna, pycares, python-dotenv, uv, mashumaro, requests, pyOpenSSL, orjson and Jinja2.
+
+## [1.3.15a4] - 2026-10-24
+
+### Changed
+
+- Upgraded the PyGazpar library to `1.4.0a7`.
+
+## [1.3.15a3] - 2026-10-10
+
+### Changed
+
+- Upgraded the PyGazpar library to `1.4.0a5`. It no longer depends on `pandas`, so `pandas` and the packages it needed are no longer installed.
+- Development tooling: [uv](https://docs.astral.sh/uv/) replaces Poetry. The development tools and Home Assistant are a `dev` dependency group in `pyproject.toml` (the project is not built as a package), and the locked versions are in `uv.lock` (`poetry.lock` is removed). To work on the integration, run `uv sync` instead of `poetry install`. The CI and release workflows use uv. The integration is unchanged.
+
+## [1.3.15a2] - 2026-10-05
+
+### Added
+
+- A GrDF account can be set up from the Home Assistant UI, with a config flow and an options flow for the update interval and the number of days downloaded. The YAML configuration keeps working: it is imported into the UI, and it updates the entry of the same meter while it is there.
+- The sensor has a unique ID per meter and belongs to a device.
+
+### Changed
+
+- Upgrade PyGazpar library version to 1.4.0a4.
+- Python 3.14.2 or newer is now required for development, and CI runs on Python 3.14.
+- Development dependency: Home Assistant `^2026.9.0`.
+- Development dependencies: `pytest-homeassistant-custom-component` `0.13.367` runs the config flow tests in a Home Assistant instance; pytest `^9.0.3`, pytest-asyncio `1.4.0` and httpcore `1.0.9` (the version that imports on Python 3.14.7).
+- Development tooling: ruff (lint and format) and mypy replace flake8, isort, black and pylint. Ruff and mypy are updated to their latest stable versions, and the CI lint and test steps are inlined in the workflow.
+- The sensor is now a `SensorEntity`: its device class, state class and unit are entity properties rather than attributes. The attributes Home Assistant derives from them are unchanged, and the sensor is pushed by each query instead of being polled.
+
+### Removed
+
+- The GRDF username is no longer exposed in the `sensor.gazpar` attributes, so it is no longer stored in the Home Assistant database.
+
+### Fixed
+
+- A daily reading with a missing index or converter factor no longer raises an error when computing the state: the last known state is kept and a warning is logged. A most recent reading without a converter factor falls back to the previous day, as one without an index already did.
+- A failed GRDF query no longer blanks the sensor: the data of the last successful query is kept, and the error is still reported in the `errorMessages` attribute.
+- The `hourly` attribute keeps only the most recent reading and error messages are cut to 500 characters, so the attributes stay under the 16 KB limit Home Assistant enforces.
+
+### Security
+
+- Locked dependencies updated to fix open Dependabot alerts: aiohttp, Pillow, PyJWT, urllib3, cryptography, anyio, idna, pycares, python-dotenv, uv, mashumaro, requests, pyOpenSSL, orjson and Jinja2.
+
+## [1.3.15a1] - 2026-10-04
+
+### Changed
+
+- Upgrade PyGazpar library version to 1.4.0a3, which brings pydantic as a new dependency.
+- Release process: the create-release workflow takes an explicit version, and checks it against the branch, the existing tags and the changelog before anything is changed.
+- Release process: the changelog is finalized automatically, and the GitHub release notes come from its section.
+- Release process: GitHub releases are created as drafts by default. A dry run option validates and bumps a release without pushing or publishing it.
+- Release process: the version bump commit and the tag are pushed together in one atomic push.
+
+### Removed
+
+- GitVersion, its configuration and the version step in CI.
+
 ## [1.3.14] - 2026-09-19
 
 ### Fixed
@@ -143,3 +235,9 @@ Anonymize the README.
 
 ### Added
 - Add HACS support.
+
+[Unreleased]: https://github.com/ssenart/home-assistant-gazpar/compare/1.3.15a4...HEAD
+[1.3.15a4]: https://github.com/ssenart/home-assistant-gazpar/compare/1.3.15a3...1.3.15a4
+[1.3.15a3]: https://github.com/ssenart/home-assistant-gazpar/compare/1.3.15a2...1.3.15a3
+[1.3.15a2]: https://github.com/ssenart/home-assistant-gazpar/compare/1.3.15a1...1.3.15a2
+[1.3.15a1]: https://github.com/ssenart/home-assistant-gazpar/compare/1.3.14...1.3.15a1
