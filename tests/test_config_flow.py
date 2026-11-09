@@ -18,7 +18,6 @@ from custom_components.gazpar.const import (
     CONF_LAST_N_DAYS,
     CONF_PCE_IDENTIFIER,
     CONF_TMPDIR,
-    CONF_WAITTIME,
     DOMAIN,
 )
 
@@ -46,7 +45,6 @@ def entry_data(name: str = "maison", pce: str = "7") -> dict:
         CONF_USERNAME: "user",
         CONF_PASSWORD: "secret",
         CONF_PCE_IDENTIFIER: pce,
-        CONF_WAITTIME: 30,
         CONF_TMPDIR: "/tmp",
         CONF_DATASOURCE: "test",
         CONF_SCAN_INTERVAL: 600,

@@ -26,7 +26,6 @@ from custom_components.gazpar.const import (
     CONF_LAST_N_DAYS,
     CONF_PCE_IDENTIFIER,
     CONF_TMPDIR,
-    CONF_WAITTIME,
 )
 from custom_components.gazpar.sensor import (
     GazparAccount,
@@ -52,7 +51,6 @@ def make_config(datasource: str, username: str = "user", password: str = "passwo
         CONF_USERNAME: username,
         CONF_PASSWORD: password,
         CONF_PCE_IDENTIFIER: pce,
-        CONF_WAITTIME: 30,
         CONF_TMPDIR: "./tmp",
         CONF_SCAN_INTERVAL: 600,
         CONF_LAST_N_DAYS: 30,

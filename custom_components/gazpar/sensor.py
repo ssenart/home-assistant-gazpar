@@ -41,12 +41,10 @@ from custom_components.gazpar.const import (
     CONF_LAST_N_DAYS,
     CONF_PCE_IDENTIFIER,
     CONF_TMPDIR,
-    CONF_WAITTIME,
     DEFAULT_DATASOURCE,
     DEFAULT_LAST_N_DAYS,
     DEFAULT_NAME,
     DEFAULT_SCAN_INTERVAL,
-    DEFAULT_WAITTIME,
     DOMAIN,
 )
 from custom_components.gazpar.manifest import Manifest
@@ -69,7 +67,6 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Required(CONF_USERNAME): cv.string,
         vol.Required(CONF_PASSWORD): cv.string,
         vol.Required(CONF_PCE_IDENTIFIER): cv.string,
-        vol.Optional(CONF_WAITTIME, default=DEFAULT_WAITTIME): int,  # type: ignore
         vol.Required(CONF_TMPDIR): cv.string,
         vol.Optional(CONF_DATASOURCE, default=DEFAULT_DATASOURCE): cv.string,  # type: ignore
         vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): cv.time_period,  # type: ignore
@@ -91,7 +88,6 @@ def entry_data_from_yaml(config: dict[str, Any]) -> dict[str, Any]:
         CONF_USERNAME: config[CONF_USERNAME],
         CONF_PASSWORD: config[CONF_PASSWORD],
         CONF_PCE_IDENTIFIER: config[CONF_PCE_IDENTIFIER],
-        CONF_WAITTIME: config[CONF_WAITTIME],
         CONF_TMPDIR: config[CONF_TMPDIR],
         CONF_DATASOURCE: config[CONF_DATASOURCE],
         CONF_SCAN_INTERVAL: int(scan_interval),
@@ -149,7 +145,6 @@ class GazparAccount:
         username: str,
         password: str,
         pceIdentifier: str,
-        wait_time: int,
         tmpdir: str,
         scan_interval: timedelta,
         lastNDays: int,
@@ -161,7 +156,6 @@ class GazparAccount:
         self._username = username
         self._password = password
         self._pceIdentifier = pceIdentifier
-        self._wait_time = wait_time
         self._tmpdir = tmpdir
         self._scan_interval = scan_interval
         self._lastNDays = lastNDays
@@ -268,7 +262,6 @@ def account_from_entry_data(data: dict[str, Any], version: str) -> GazparAccount
         data[CONF_USERNAME],
         data[CONF_PASSWORD],
         data[CONF_PCE_IDENTIFIER],
-        data[CONF_WAITTIME],
         data[CONF_TMPDIR],
         timedelta(seconds=data[CONF_SCAN_INTERVAL]),
         data[CONF_LAST_N_DAYS],

@@ -16,13 +16,11 @@ from custom_components.gazpar.const import (
     CONF_LAST_N_DAYS,
     CONF_PCE_IDENTIFIER,
     CONF_TMPDIR,
-    CONF_WAITTIME,
     DEFAULT_DATASOURCE,
     DEFAULT_LAST_N_DAYS,
     DEFAULT_NAME,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_TMPDIR,
-    DEFAULT_WAITTIME,
     DOMAIN,
 )
 
@@ -60,7 +58,6 @@ def entry_data_from_user(user_input: dict[str, Any]) -> dict[str, Any]:
 
     return {
         **user_input,
-        CONF_WAITTIME: DEFAULT_WAITTIME,
         CONF_TMPDIR: DEFAULT_TMPDIR,
         CONF_DATASOURCE: DEFAULT_DATASOURCE,
         CONF_SCAN_INTERVAL: int(DEFAULT_SCAN_INTERVAL.total_seconds()),
