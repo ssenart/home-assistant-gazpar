@@ -37,7 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
-- Locked dependencies updated to fix open Dependabot alerts: aiohttp, Pillow, PyJWT, urllib3, cryptography, anyio, idna, pycares, python-dotenv, uv, mashumaro, requests, pyOpenSSL, orjson and Jinja2.
+- Locked dependencies updated to fix Dependabot alerts: certifi, aiohttp, urllib3, cryptography, anyio, idna, pycares, python-dotenv, uv, mashumaro, requests, pyOpenSSL, orjson and Jinja2.
+- Pillow and PyJWT are still pinned by Home Assistant (`homeassistant` requires `Pillow==12.3.0` and `PyJWT==2.13.0`), so their alerts remain open until Home Assistant upgrades them. The integration does not ship these packages: Home Assistant provides them.
 
 ## [1.3.15a4] - 2026-10-24
 
